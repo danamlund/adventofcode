@@ -1,0 +1,97 @@
+* altair 8800
+ - manual http://www.classiccmp.org/dunfield/altair/d/88opman.pdf
+ - simh emulator (executable altair)
+ - simh manual: http://simh.trailing-edge.com/pdf/simh_doc.pdf
+ - simh altair manual: file:/usr/share/doc/simh/altair.txt.gz
+ - 8800 manual: [[file:88opman.pdf]]
+ - basic: [[file:Altair_8800_BASIC_Reference_Manual_1975.PDF]]
+** how to load program
+
+** how to run problem
+ - input by front panel while running?
+ - input by card reader?
+ - input by com port?
+
+** load basic
+*** how to run disk
+ attach dsk0 mbasic.dsk
+ go 177400
+
+*** how to load basic through tape
+  - https://www.youtube.com/watch?v=8InWiihlIQw
+  - but that uses SIO2
+  - and I can only mount PTR (which is port 2)
+    - according
+ TODO
+
+*** tape reader
+ - Altair_8800_BASIC_Reference_Manual_1975 p. 106
+d 000 257
+d 001 323
+d 002 020
+d 003 000
+d 004 323
+d 005 021
+d 006 076
+d 007 004
+d 010 323
+d 011 020
+d 012 041
+d 013 256
+d 014 017
+d 015 061
+d 016 035
+d 017 000
+d 020 333
+d 021 020
+d 022 346
+d 023 100
+d 024 310
+d 025 333
+d 026 021
+d 027 275
+d 030 310
+d 031 055
+d 032 167
+d 033 300
+d 034 351
+d 035 015
+d 036 000
+
+ - set A12 on (no idea how)
+ - did not work
+
+** load from binary file
+attach ptr test.bin
+d 000 333
+d 001 022
+
+
+
+* input
+#+BEGIN_EXAMPLE
+104	240	147	246	123	175	372	71	116	230	260	118	202	270	277	292
+740	755	135	205	429	822	844	90	828	115	440	805	526	91	519	373
+1630	991	1471	1294	52	1566	50	1508	1367	1489	55	547	342	512	323	51
+1356	178	1705	119	1609	1409	245	292	1434	694	405	1692	247	193	1482	1407
+2235	3321	3647	212	1402	3711	3641	1287	2725	692	1235	3100	123	144	104	101
+1306	1224	1238	186	751	734	1204	1275	366	149	1114	166	1118	239	153	943
+132	1547	1564	512	2643	2376	2324	2159	1658	107	1604	145	2407	131	2073	1878
+1845	91	1662	108	92	1706	1815	1797	1728	1150	1576	83	97	547	1267	261
+78	558	419	435	565	107	638	173	93	580	338	52	633	256	377	73
+1143	3516	4205	3523	148	401	3996	3588	300	1117	2915	1649	135	134	182	267
+156	2760	1816	2442	2985	990	2598	1273	167	821	138	141	2761	2399	1330	1276
+3746	3979	2989	161	4554	156	3359	173	3319	192	3707	264	762	2672	4423	2924
+3098	4309	4971	5439	131	171	5544	595	154	571	4399	4294	160	6201	4329	5244
+728	249	1728	305	2407	239	691	2241	2545	1543	55	2303	1020	753	193	1638
+260	352	190	877	118	77	1065	1105	1085	1032	71	87	851	56	1161	667
+1763	464	182	1932	1209	640	545	931	1979	197	1774	174	2074	1800	939	161
+#+END_EXAMPLE
+
+
+HALT: 166
+JMP: 303 low high: 303 000 000
+
+** solution
+|   |
+|   |
