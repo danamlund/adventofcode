@@ -1,6 +1,33 @@
 * setup
 (require 'ob-org)
 (require 'ob-python)
+** stdout/stderr on bad exit-code
+#+BEGIN_SRC elisp
+(defun org-babel-eval (cmd body)
+  "Run CMD on BODY.
+If CMD succeeds then return its results, otherwise display
+STDERR with `org-babel-eval-error-notify'."
+  (let ((err-buff (get-buffer-create " *Org-Babel Error*")) exit-code)
+    (with-current-buffer err-buff (erase-buffer))
+    (with-temp-buffer
+      (insert body)
+      (setq exit-code
+	    (org-babel--shell-command-on-region
+	     (point-min) (point-max) cmd err-buff))
+      (if (or (not (numberp exit-code)) (> exit-code 0))
+	  (progn
+	    (with-current-buffer err-buff
+	      (org-babel-eval-error-notify exit-code (buffer-string)))
+	    (save-excursion
+	      (when (get-buffer org-babel-error-buffer-name)
+		(with-current-buffer org-babel-error-buffer-name
+		  (unless (derived-mode-p 'compilation-mode)
+		    (compilation-mode))
+		  ;; Compilation-mode enforces read-only, but Babel expects the buffer modifiable.
+		  (setq buffer-read-only nil))))
+	    (concat (buffer-string) "STDERR:\n" (with-current-buffer err-buff (buffer-string))))
+	(buffer-string)))))
+#+END_SRC
 * make work
  - tangle file: C-c C-v t
  - C-c C-c code src
@@ -885,3 +912,1238 @@ print(f(list(open("06.txt")), 10000))
 
 #+RESULTS:
 : 40284
+* day 07
+** text
+--- Day 7: The Sum of Its Parts ---
+
+You find yourself standing on a snow-covered coastline; apparently, you landed a little off course. The region is too hilly to see the North Pole from here, but you do spot some Elves that seem to be trying to unpack something that washed ashore. It's quite cold out, so you decide to risk creating a paradox by asking them for directions.
+
+"Oh, are you the search party?" Somehow, you can understand whatever Elves from the year 1018 speak; you assume it's Ancient Nordic Elvish. Could the device on your wrist also be a translator? "Those clothes don't look very warm; take this." They hand you a heavy coat.
+
+"We do need to find our way back to the North Pole, but we have higher priorities at the moment. You see, believe it or not, this box contains something that will solve all of Santa's transportation problems - at least, that's what it looks like from the pictures in the instructions." It doesn't seem like they can read whatever language it's in, but you can: "Sleigh kit. Some assembly required."
+
+"'Sleigh'? What a wonderful name! You must help us assemble this 'sleigh' at once!" They start excitedly pulling more parts out of the box.
+
+The instructions specify a series of steps and requirements about which steps must be finished before others can begin (your puzzle input). Each step is designated by a single letter. For example, suppose you have the following instructions:
+
+Step C must be finished before step A can begin.
+Step C must be finished before step F can begin.
+Step A must be finished before step B can begin.
+Step A must be finished before step D can begin.
+Step B must be finished before step E can begin.
+Step D must be finished before step E can begin.
+Step F must be finished before step E can begin.
+
+Visually, these requirements look like this:
+
+
+  -->A--->B--
+ /    \      \
+C      -->D----->E
+ \           /
+  ---->F-----
+
+Your first goal is to determine the order in which the steps should be completed. If more than one step is ready, choose the step which is first alphabetically. In this example, the steps would be completed as follows:
+
+    Only C is available, and so it is done first.
+    Next, both A and F are available. A is first alphabetically, so it is done next.
+    Then, even though F was available earlier, steps B and D are now also available, and B is the first alphabetically of the three.
+    After that, only D and F are available. E is not available because only some of its prerequisites are complete. Therefore, D is completed next.
+    F is the only choice, so it is done next.
+    Finally, E is completed.
+
+So, in this example, the correct order is CABDFE.
+
+In what order should the steps in your instructions be completed?
+
+Your puzzle answer was GJKLDFNPTMQXIYHUVREOZSAWCB.
+--- Part Two ---
+
+As you're about to begin construction, four of the Elves offer to help. "The sun will set soon; it'll go faster if we work together." Now, you need to account for multiple people working on steps simultaneously. If multiple steps are available, workers should still begin them in alphabetical order.
+
+Each step takes 60 seconds plus an amount corresponding to its letter: A=1, B=2, C=3, and so on. So, step A takes 60+1=61 seconds, while step Z takes 60+26=86 seconds. No time is required between steps.
+
+To simplify things for the example, however, suppose you only have help from one Elf (a total of two workers) and that each step takes 60 fewer seconds (so that step A takes 1 second and step Z takes 26 seconds). Then, using the same instructions as above, this is how each second would be spent:
+
+Second   Worker 1   Worker 2   Done
+   0        C          .        
+   1        C          .        
+   2        C          .        
+   3        A          F       C
+   4        B          F       CA
+   5        B          F       CA
+   6        D          F       CAB
+   7        D          F       CAB
+   8        D          F       CAB
+   9        D          .       CABF
+  10        E          .       CABFD
+  11        E          .       CABFD
+  12        E          .       CABFD
+  13        E          .       CABFD
+  14        E          .       CABFD
+  15        .          .       CABFDE
+
+Each row represents one second of time. The Second column identifies how many seconds have passed as of the beginning of that second. Each worker column shows the step that worker is currently doing (or . if they are idle). The Done column shows completed steps.
+
+Note that the order of the steps has changed; this is because steps now take time to finish and multiple workers can begin multiple steps simultaneously.
+
+In this example, it would take 15 seconds for two workers to complete these steps.
+
+With 5 workers and the 60+ second step durations described above, how long will it take to complete all of the steps?
+
+Your puzzle answer was 967.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+#+BEGIN_SRC python :results output
+  def f(lines):
+    beforeAfter = [ (line[5], line[36]) for line in lines]
+    befores = {}
+    afters = {}
+    for x in set([ a for a,b in beforeAfter ] + [b for a,b in beforeAfter ]):
+      befores[x] = set()
+      afters[x] = set()
+    for a, b in beforeAfter:
+      befores[b].add(a)
+      afters[a].add(b)
+
+    output = []
+    while len(befores) > 0:
+      x = min([ x for x,y in befores.items() if len(y) == 0 ])
+      output.append(x)
+      for y in afters[x]:
+        if y in befores:
+          befores[y].remove(x)
+      befores.pop(x, None)
+    return "".join(output)
+
+  assert f(["Step C must be finished before step A can begin.",
+  "Step C must be finished before step F can begin.",
+  "Step A must be finished before step B can begin.",
+  "Step A must be finished before step D can begin.",
+  "Step B must be finished before step E can begin.",
+  "Step D must be finished before step E can begin.",
+  "Step F must be finished before step E can begin."]) == "CABDFE"
+
+  print(f(list(open("07.txt"))))
+#+END_SRC
+
+#+RESULTS:
+: GJKLDFNPTMQXIYHUVREOZSAWCB
+
+** part 2
+#+BEGIN_SRC python :results output
+  def f(lines, workers, add):
+    beforeAfter = [ (line[5], line[36]) for line in lines]
+    befores = {}
+    afters = {}
+    for x in set([ a for a,b in beforeAfter ] + [b for a,b in beforeAfter ]):
+      befores[x] = set()
+      afters[x] = set()
+    for a, b in beforeAfter:
+      befores[b].add(a)
+      afters[a].add(b)
+
+    done = ""
+    sec = 0
+    donesecs = {}
+    while len(befores) > 0:
+      for x, s in donesecs.items():
+        if sec >= s:
+          for y in afters[x]:
+            if y in befores and x in befores[y]:
+              befores[y].remove(x)
+          befores.pop(x, None)
+          donesecs.pop(x, None)
+          done += x
+          print(x, sec, "STOP")
+
+      nexts = sorted([ x for x,y in befores.items() if len(y) == 0 ])
+      for x in nexts:
+        if not x in donesecs and len(donesecs) < workers:
+          donesecs[x] = sec + add + ord(x) - ord('A') + 1
+          print(x, sec, "START", donesecs, nexts)
+
+      doing = []
+      fookeys = sorted(donesecs.keys())
+      for i in xrange(5):
+        if i < len(fookeys):
+          doing.append(fookeys[i])
+        else:
+          doing.append(".")
+      print("%5d  %s  %s  %s  %s  %s  %-20s %-20s" % (sec, 
+            doing[0], doing[1], doing[2], doing[3], doing[4],
+            nexts, done))
+      sec += 1
+
+    return sec - 1
+
+
+  assert f(["Step C must be finished before step A can begin.",
+  "Step C must be finished before step F can begin.",
+  "Step A must be finished before step B can begin.",
+  "Step A must be finished before step D can begin.",
+  "Step B must be finished before step E can begin.",
+  "Step D must be finished before step E can begin.",
+  "Step F must be finished before step E can begin."], 2, 0) == 15
+  print()
+  print(f(list(open("07.txt")), 5, 60))
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+('C', 0, 'START', {'C': 3}, ['C'])
+    0  C  .  .  .  .  ['C']                                    
+    1  C  .  .  .  .  ['C']                                    
+    2  C  .  .  .  .  ['C']                                    
+('C', 3, 'STOP')
+('A', 3, 'START', {'A': 4}, ['A', 'F'])
+('F', 3, 'START', {'A': 4, 'F': 9}, ['A', 'F'])
+    3  A  F  .  .  .  ['A', 'F']           C                   
+('A', 4, 'STOP')
+('B', 4, 'START', {'B': 6, 'F': 9}, ['B', 'D', 'F'])
+    4  B  F  .  .  .  ['B', 'D', 'F']      CA                  
+    5  B  F  .  .  .  ['B', 'D', 'F']      CA                  
+('B', 6, 'STOP')
+('D', 6, 'START', {'D': 10, 'F': 9}, ['D', 'F'])
+    6  D  F  .  .  .  ['D', 'F']           CAB                 
+    7  D  F  .  .  .  ['D', 'F']           CAB                 
+    8  D  F  .  .  .  ['D', 'F']           CAB                 
+('F', 9, 'STOP')
+    9  D  .  .  .  .  ['D']                CABF                
+('D', 10, 'STOP')
+('E', 10, 'START', {'E': 15}, ['E'])
+   10  E  .  .  .  .  ['E']                CABFD               
+   11  E  .  .  .  .  ['E']                CABFD               
+   12  E  .  .  .  .  ['E']                CABFD               
+   13  E  .  .  .  .  ['E']                CABFD               
+   14  E  .  .  .  .  ['E']                CABFD               
+('E', 15, 'STOP')
+   15  .  .  .  .  .  []                   CABFDE              
+()
+('G', 0, 'START', {'G': 67}, ['G', 'J', 'L', 'N'])
+('J', 0, 'START', {'J': 70, 'G': 67}, ['G', 'J', 'L', 'N'])
+('L', 0, 'START', {'J': 70, 'L': 72, 'G': 67}, ['G', 'J', 'L', 'N'])
+('N', 0, 'START', {'J': 70, 'L': 72, 'G': 67, 'N': 74}, ['G', 'J', 'L', 'N'])
+    0  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    1  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    2  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    3  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    4  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    5  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    6  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    7  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    8  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+    9  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   10  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   11  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   12  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   13  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   14  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   15  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   16  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   17  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   18  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   19  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   20  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   21  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   22  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   23  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   24  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   25  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   26  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   27  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   28  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   29  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   30  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   31  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   32  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   33  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   34  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   35  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   36  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   37  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   38  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   39  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   40  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   41  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   42  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   43  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   44  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   45  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   46  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   47  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   48  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   49  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   50  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   51  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   52  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   53  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   54  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   55  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   56  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   57  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   58  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   59  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   60  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   61  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   62  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   63  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   64  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   65  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+   66  G  J  L  N  .  ['G', 'J', 'L', 'N']                     
+('G', 67, 'STOP')
+   67  J  L  N  .  .  ['J', 'L', 'N']      G                   
+   68  J  L  N  .  .  ['J', 'L', 'N']      G                   
+   69  J  L  N  .  .  ['J', 'L', 'N']      G                   
+('J', 70, 'STOP')
+('K', 70, 'START', {'K': 141, 'L': 72, 'N': 74}, ['K', 'L', 'N'])
+   70  K  L  N  .  .  ['K', 'L', 'N']      GJ                  
+   71  K  L  N  .  .  ['K', 'L', 'N']      GJ                  
+('L', 72, 'STOP')
+('D', 72, 'START', {'K': 141, 'D': 136, 'N': 74}, ['D', 'K', 'N'])
+   72  D  K  N  .  .  ['D', 'K', 'N']      GJL                 
+   73  D  K  N  .  .  ['D', 'K', 'N']      GJL                 
+('N', 74, 'STOP')
+   74  D  K  .  .  .  ['D', 'K']           GJLN                
+   75  D  K  .  .  .  ['D', 'K']           GJLN                
+   76  D  K  .  .  .  ['D', 'K']           GJLN                
+   77  D  K  .  .  .  ['D', 'K']           GJLN                
+   78  D  K  .  .  .  ['D', 'K']           GJLN                
+   79  D  K  .  .  .  ['D', 'K']           GJLN                
+   80  D  K  .  .  .  ['D', 'K']           GJLN                
+   81  D  K  .  .  .  ['D', 'K']           GJLN                
+   82  D  K  .  .  .  ['D', 'K']           GJLN                
+   83  D  K  .  .  .  ['D', 'K']           GJLN                
+   84  D  K  .  .  .  ['D', 'K']           GJLN                
+   85  D  K  .  .  .  ['D', 'K']           GJLN                
+   86  D  K  .  .  .  ['D', 'K']           GJLN                
+   87  D  K  .  .  .  ['D', 'K']           GJLN                
+   88  D  K  .  .  .  ['D', 'K']           GJLN                
+   89  D  K  .  .  .  ['D', 'K']           GJLN                
+   90  D  K  .  .  .  ['D', 'K']           GJLN                
+   91  D  K  .  .  .  ['D', 'K']           GJLN                
+   92  D  K  .  .  .  ['D', 'K']           GJLN                
+   93  D  K  .  .  .  ['D', 'K']           GJLN                
+   94  D  K  .  .  .  ['D', 'K']           GJLN                
+   95  D  K  .  .  .  ['D', 'K']           GJLN                
+   96  D  K  .  .  .  ['D', 'K']           GJLN                
+   97  D  K  .  .  .  ['D', 'K']           GJLN                
+   98  D  K  .  .  .  ['D', 'K']           GJLN                
+   99  D  K  .  .  .  ['D', 'K']           GJLN                
+  100  D  K  .  .  .  ['D', 'K']           GJLN                
+  101  D  K  .  .  .  ['D', 'K']           GJLN                
+  102  D  K  .  .  .  ['D', 'K']           GJLN                
+  103  D  K  .  .  .  ['D', 'K']           GJLN                
+  104  D  K  .  .  .  ['D', 'K']           GJLN                
+  105  D  K  .  .  .  ['D', 'K']           GJLN                
+  106  D  K  .  .  .  ['D', 'K']           GJLN                
+  107  D  K  .  .  .  ['D', 'K']           GJLN                
+  108  D  K  .  .  .  ['D', 'K']           GJLN                
+  109  D  K  .  .  .  ['D', 'K']           GJLN                
+  110  D  K  .  .  .  ['D', 'K']           GJLN                
+  111  D  K  .  .  .  ['D', 'K']           GJLN                
+  112  D  K  .  .  .  ['D', 'K']           GJLN                
+  113  D  K  .  .  .  ['D', 'K']           GJLN                
+  114  D  K  .  .  .  ['D', 'K']           GJLN                
+  115  D  K  .  .  .  ['D', 'K']           GJLN                
+  116  D  K  .  .  .  ['D', 'K']           GJLN                
+  117  D  K  .  .  .  ['D', 'K']           GJLN                
+  118  D  K  .  .  .  ['D', 'K']           GJLN                
+  119  D  K  .  .  .  ['D', 'K']           GJLN                
+  120  D  K  .  .  .  ['D', 'K']           GJLN                
+  121  D  K  .  .  .  ['D', 'K']           GJLN                
+  122  D  K  .  .  .  ['D', 'K']           GJLN                
+  123  D  K  .  .  .  ['D', 'K']           GJLN                
+  124  D  K  .  .  .  ['D', 'K']           GJLN                
+  125  D  K  .  .  .  ['D', 'K']           GJLN                
+  126  D  K  .  .  .  ['D', 'K']           GJLN                
+  127  D  K  .  .  .  ['D', 'K']           GJLN                
+  128  D  K  .  .  .  ['D', 'K']           GJLN                
+  129  D  K  .  .  .  ['D', 'K']           GJLN                
+  130  D  K  .  .  .  ['D', 'K']           GJLN                
+  131  D  K  .  .  .  ['D', 'K']           GJLN                
+  132  D  K  .  .  .  ['D', 'K']           GJLN                
+  133  D  K  .  .  .  ['D', 'K']           GJLN                
+  134  D  K  .  .  .  ['D', 'K']           GJLN                
+  135  D  K  .  .  .  ['D', 'K']           GJLN                
+('D', 136, 'STOP')
+('F', 136, 'START', {'K': 141, 'F': 202}, ['F', 'K', 'P'])
+('P', 136, 'START', {'P': 212, 'F': 202, 'K': 141}, ['F', 'K', 'P'])
+  136  F  K  P  .  .  ['F', 'K', 'P']      GJLND               
+  137  F  K  P  .  .  ['F', 'K', 'P']      GJLND               
+  138  F  K  P  .  .  ['F', 'K', 'P']      GJLND               
+  139  F  K  P  .  .  ['F', 'K', 'P']      GJLND               
+  140  F  K  P  .  .  ['F', 'K', 'P']      GJLND               
+('K', 141, 'STOP')
+('T', 141, 'START', {'P': 212, 'T': 221, 'F': 202}, ['F', 'P', 'T', 'X', 'Y'])
+('X', 141, 'START', {'P': 212, 'T': 221, 'F': 202, 'X': 225}, ['F', 'P', 'T', 'X', 'Y'])
+('Y', 141, 'START', {'P': 212, 'T': 221, 'F': 202, 'Y': 226, 'X': 225}, ['F', 'P', 'T', 'X', 'Y'])
+  141  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  142  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  143  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  144  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  145  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  146  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  147  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  148  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  149  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  150  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  151  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  152  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  153  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  154  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  155  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  156  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  157  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  158  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  159  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  160  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  161  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  162  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  163  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  164  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  165  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  166  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  167  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  168  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  169  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  170  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  171  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  172  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  173  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  174  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  175  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  176  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  177  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  178  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  179  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  180  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  181  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  182  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  183  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  184  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  185  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  186  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  187  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  188  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  189  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  190  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  191  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  192  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  193  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  194  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  195  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  196  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  197  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  198  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  199  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  200  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+  201  F  P  T  X  Y  ['F', 'P', 'T', 'X', 'Y'] GJLNDK              
+('F', 202, 'STOP')
+  202  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  203  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  204  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  205  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  206  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  207  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  208  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  209  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  210  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+  211  P  T  X  Y  .  ['P', 'T', 'X', 'Y'] GJLNDKF             
+('P', 212, 'STOP')
+  212  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+  213  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+  214  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+  215  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+  216  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+  217  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+  218  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+  219  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+  220  T  X  Y  .  .  ['T', 'X', 'Y']      GJLNDKFP            
+('T', 221, 'STOP')
+('M', 221, 'START', {'Y': 226, 'X': 225, 'M': 294}, ['M', 'X', 'Y'])
+  221  M  X  Y  .  .  ['M', 'X', 'Y']      GJLNDKFPT           
+  222  M  X  Y  .  .  ['M', 'X', 'Y']      GJLNDKFPT           
+  223  M  X  Y  .  .  ['M', 'X', 'Y']      GJLNDKFPT           
+  224  M  X  Y  .  .  ['M', 'X', 'Y']      GJLNDKFPT           
+('X', 225, 'STOP')
+('I', 225, 'START', {'I': 294, 'Y': 226, 'M': 294}, ['I', 'M', 'Y'])
+  225  I  M  Y  .  .  ['I', 'M', 'Y']      GJLNDKFPTX          
+('Y', 226, 'STOP')
+('H', 226, 'START', {'I': 294, 'H': 294, 'M': 294}, ['H', 'I', 'M'])
+  226  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  227  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  228  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  229  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  230  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  231  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  232  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  233  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  234  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  235  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  236  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  237  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  238  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  239  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  240  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  241  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  242  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  243  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  244  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  245  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  246  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  247  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  248  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  249  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  250  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  251  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  252  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  253  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  254  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  255  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  256  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  257  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  258  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  259  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  260  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  261  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  262  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  263  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  264  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  265  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  266  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  267  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  268  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  269  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  270  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  271  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  272  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  273  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  274  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  275  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  276  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  277  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  278  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  279  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  280  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  281  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  282  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  283  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  284  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  285  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  286  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  287  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  288  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  289  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  290  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  291  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  292  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+  293  H  I  M  .  .  ['H', 'I', 'M']      GJLNDKFPTXY         
+('I', 294, 'STOP')
+('H', 294, 'STOP')
+('M', 294, 'STOP')
+('Q', 294, 'START', {'Q': 371}, ['Q', 'U', 'V'])
+('U', 294, 'START', {'Q': 371, 'U': 375}, ['Q', 'U', 'V'])
+('V', 294, 'START', {'Q': 371, 'U': 375, 'V': 376}, ['Q', 'U', 'V'])
+  294  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  295  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  296  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  297  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  298  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  299  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  300  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  301  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  302  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  303  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  304  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  305  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  306  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  307  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  308  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  309  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  310  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  311  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  312  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  313  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  314  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  315  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  316  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  317  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  318  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  319  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  320  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  321  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  322  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  323  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  324  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  325  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  326  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  327  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  328  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  329  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  330  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  331  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  332  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  333  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  334  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  335  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  336  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  337  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  338  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  339  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  340  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  341  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  342  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  343  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  344  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  345  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  346  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  347  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  348  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  349  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  350  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  351  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  352  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  353  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  354  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  355  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  356  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  357  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  358  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  359  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  360  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  361  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  362  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  363  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  364  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  365  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  366  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  367  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  368  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  369  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+  370  Q  U  V  .  .  ['Q', 'U', 'V']      GJLNDKFPTXYIHM      
+('Q', 371, 'STOP')
+  371  U  V  .  .  .  ['U', 'V']           GJLNDKFPTXYIHMQ     
+  372  U  V  .  .  .  ['U', 'V']           GJLNDKFPTXYIHMQ     
+  373  U  V  .  .  .  ['U', 'V']           GJLNDKFPTXYIHMQ     
+  374  U  V  .  .  .  ['U', 'V']           GJLNDKFPTXYIHMQ     
+('U', 375, 'STOP')
+  375  V  .  .  .  .  ['V']                GJLNDKFPTXYIHMQU    
+('V', 376, 'STOP')
+('R', 376, 'START', {'R': 454}, ['R'])
+  376  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  377  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  378  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  379  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  380  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  381  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  382  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  383  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  384  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  385  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  386  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  387  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  388  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  389  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  390  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  391  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  392  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  393  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  394  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  395  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  396  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  397  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  398  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  399  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  400  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  401  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  402  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  403  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  404  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  405  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  406  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  407  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  408  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  409  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  410  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  411  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  412  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  413  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  414  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  415  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  416  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  417  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  418  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  419  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  420  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  421  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  422  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  423  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  424  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  425  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  426  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  427  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  428  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  429  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  430  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  431  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  432  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  433  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  434  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  435  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  436  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  437  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  438  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  439  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  440  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  441  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  442  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  443  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  444  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  445  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  446  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  447  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  448  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  449  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  450  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  451  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  452  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+  453  R  .  .  .  .  ['R']                GJLNDKFPTXYIHMQUV   
+('R', 454, 'STOP')
+('E', 454, 'START', {'E': 519}, ['E'])
+  454  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  455  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  456  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  457  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  458  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  459  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  460  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  461  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  462  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  463  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  464  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  465  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  466  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  467  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  468  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  469  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  470  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  471  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  472  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  473  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  474  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  475  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  476  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  477  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  478  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  479  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  480  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  481  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  482  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  483  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  484  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  485  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  486  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  487  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  488  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  489  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  490  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  491  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  492  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  493  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  494  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  495  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  496  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  497  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  498  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  499  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  500  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  501  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  502  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  503  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  504  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  505  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  506  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  507  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  508  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  509  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  510  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  511  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  512  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  513  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  514  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  515  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  516  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  517  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+  518  E  .  .  .  .  ['E']                GJLNDKFPTXYIHMQUVR  
+('E', 519, 'STOP')
+('O', 519, 'START', {'O': 594}, ['O'])
+  519  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  520  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  521  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  522  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  523  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  524  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  525  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  526  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  527  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  528  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  529  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  530  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  531  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  532  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  533  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  534  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  535  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  536  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  537  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  538  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  539  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  540  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  541  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  542  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  543  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  544  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  545  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  546  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  547  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  548  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  549  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  550  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  551  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  552  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  553  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  554  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  555  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  556  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  557  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  558  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  559  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  560  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  561  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  562  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  563  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  564  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  565  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  566  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  567  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  568  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  569  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  570  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  571  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  572  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  573  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  574  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  575  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  576  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  577  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  578  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  579  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  580  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  581  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  582  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  583  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  584  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  585  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  586  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  587  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  588  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  589  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  590  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  591  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  592  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+  593  O  .  .  .  .  ['O']                GJLNDKFPTXYIHMQUVRE 
+('O', 594, 'STOP')
+('Z', 594, 'START', {'Z': 680}, ['Z'])
+  594  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  595  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  596  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  597  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  598  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  599  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  600  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  601  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  602  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  603  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  604  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  605  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  606  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  607  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  608  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  609  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  610  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  611  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  612  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  613  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  614  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  615  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  616  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  617  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  618  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  619  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  620  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  621  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  622  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  623  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  624  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  625  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  626  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  627  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  628  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  629  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  630  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  631  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  632  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  633  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  634  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  635  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  636  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  637  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  638  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  639  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  640  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  641  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  642  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  643  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  644  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  645  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  646  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  647  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  648  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  649  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  650  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  651  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  652  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  653  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  654  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  655  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  656  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  657  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  658  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  659  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  660  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  661  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  662  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  663  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  664  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  665  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  666  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  667  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  668  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  669  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  670  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  671  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  672  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  673  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  674  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  675  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  676  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  677  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  678  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+  679  Z  .  .  .  .  ['Z']                GJLNDKFPTXYIHMQUVREO
+('Z', 680, 'STOP')
+('S', 680, 'START', {'S': 759}, ['S'])
+  680  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  681  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  682  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  683  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  684  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  685  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  686  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  687  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  688  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  689  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  690  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  691  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  692  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  693  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  694  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  695  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  696  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  697  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  698  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  699  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  700  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  701  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  702  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  703  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  704  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  705  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  706  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  707  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  708  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  709  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  710  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  711  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  712  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  713  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  714  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  715  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  716  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  717  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  718  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  719  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  720  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  721  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  722  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  723  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  724  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  725  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  726  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  727  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  728  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  729  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  730  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  731  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  732  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  733  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  734  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  735  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  736  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  737  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  738  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  739  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  740  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  741  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  742  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  743  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  744  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  745  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  746  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  747  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  748  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  749  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  750  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  751  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  752  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  753  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  754  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  755  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  756  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  757  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+  758  S  .  .  .  .  ['S']                GJLNDKFPTXYIHMQUVREOZ
+('S', 759, 'STOP')
+('A', 759, 'START', {'A': 820}, ['A', 'W'])
+('W', 759, 'START', {'A': 820, 'W': 842}, ['A', 'W'])
+  759  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  760  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  761  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  762  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  763  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  764  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  765  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  766  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  767  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  768  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  769  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  770  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  771  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  772  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  773  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  774  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  775  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  776  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  777  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  778  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  779  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  780  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  781  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  782  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  783  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  784  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  785  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  786  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  787  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  788  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  789  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  790  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  791  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  792  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  793  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  794  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  795  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  796  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  797  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  798  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  799  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  800  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  801  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  802  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  803  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  804  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  805  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  806  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  807  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  808  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  809  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  810  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  811  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  812  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  813  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  814  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  815  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  816  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  817  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  818  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+  819  A  W  .  .  .  ['A', 'W']           GJLNDKFPTXYIHMQUVREOZS
+('A', 820, 'STOP')
+  820  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  821  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  822  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  823  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  824  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  825  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  826  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  827  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  828  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  829  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  830  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  831  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  832  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  833  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  834  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  835  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  836  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  837  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  838  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  839  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  840  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+  841  W  .  .  .  .  ['W']                GJLNDKFPTXYIHMQUVREOZSA
+('W', 842, 'STOP')
+('C', 842, 'START', {'C': 905}, ['C'])
+  842  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  843  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  844  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  845  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  846  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  847  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  848  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  849  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  850  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  851  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  852  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  853  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  854  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  855  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  856  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  857  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  858  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  859  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  860  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  861  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  862  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  863  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  864  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  865  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  866  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  867  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  868  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  869  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  870  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  871  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  872  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  873  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  874  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  875  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  876  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  877  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  878  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  879  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  880  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  881  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  882  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  883  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  884  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  885  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  886  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  887  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  888  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  889  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  890  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  891  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  892  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  893  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  894  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  895  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  896  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  897  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  898  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  899  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  900  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  901  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  902  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  903  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+  904  C  .  .  .  .  ['C']                GJLNDKFPTXYIHMQUVREOZSAW
+('C', 905, 'STOP')
+('B', 905, 'START', {'B': 967}, ['B'])
+  905  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  906  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  907  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  908  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  909  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  910  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  911  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  912  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  913  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  914  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  915  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  916  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  917  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  918  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  919  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  920  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  921  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  922  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  923  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  924  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  925  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  926  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  927  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  928  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  929  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  930  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  931  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  932  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  933  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  934  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  935  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  936  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  937  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  938  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  939  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  940  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  941  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  942  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  943  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  944  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  945  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  946  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  947  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  948  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  949  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  950  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  951  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  952  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  953  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  954  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  955  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  956  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  957  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  958  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  959  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  960  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  961  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  962  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  963  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  964  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  965  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+  966  B  .  .  .  .  ['B']                GJLNDKFPTXYIHMQUVREOZSAWC
+('B', 967, 'STOP')
+  967  .  .  .  .  .  []                   GJLNDKFPTXYIHMQUVREOZSAWCB
+967
+#+end_example
+
+ - 1108 too high
+ - 1039 too high
+ - 1038 too high
