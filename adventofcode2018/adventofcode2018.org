@@ -2465,3 +2465,379 @@ print(f(int(input[0]), 100*int(input[6])))
 #+RESULTS:
 : 3183301184
 
+* day 10
+** puzzle
+--- Day 10: The Stars Align ---
+
+It's no use; your navigation system simply isn't capable of providing walking directions in the arctic circle, and certainly not in 1018.
+
+The Elves suggest an alternative. In times like these, North Pole rescue operations will arrange points of light in the sky to guide missing Elves back to base. Unfortunately, the message is easy to miss: the points move slowly enough that it takes hours to align them, but have so much momentum that they only stay aligned for a second. If you blink at the wrong time, it might be hours before another message appears.
+
+You can see these points of light floating in the distance, and record their position in the sky and their velocity, the relative change in position per second (your puzzle input). The coordinates are all given from your perspective; given enough time, those positions and velocities will move the points into a cohesive message!
+
+Rather than wait, you decide to fast-forward the process and calculate what the points will eventually spell.
+
+For example, suppose you note the following points:
+
+position=< 9,  1> velocity=< 0,  2>
+position=< 7,  0> velocity=<-1,  0>
+position=< 3, -2> velocity=<-1,  1>
+position=< 6, 10> velocity=<-2, -1>
+position=< 2, -4> velocity=< 2,  2>
+position=<-6, 10> velocity=< 2, -2>
+position=< 1,  8> velocity=< 1, -1>
+position=< 1,  7> velocity=< 1,  0>
+position=<-3, 11> velocity=< 1, -2>
+position=< 7,  6> velocity=<-1, -1>
+position=<-2,  3> velocity=< 1,  0>
+position=<-4,  3> velocity=< 2,  0>
+position=<10, -3> velocity=<-1,  1>
+position=< 5, 11> velocity=< 1, -2>
+position=< 4,  7> velocity=< 0, -1>
+position=< 8, -2> velocity=< 0,  1>
+position=<15,  0> velocity=<-2,  0>
+position=< 1,  6> velocity=< 1,  0>
+position=< 8,  9> velocity=< 0, -1>
+position=< 3,  3> velocity=<-1,  1>
+position=< 0,  5> velocity=< 0, -1>
+position=<-2,  2> velocity=< 2,  0>
+position=< 5, -2> velocity=< 1,  2>
+position=< 1,  4> velocity=< 2,  1>
+position=<-2,  7> velocity=< 2, -2>
+position=< 3,  6> velocity=<-1, -1>
+position=< 5,  0> velocity=< 1,  0>
+position=<-6,  0> velocity=< 2,  0>
+position=< 5,  9> velocity=< 1, -2>
+position=<14,  7> velocity=<-2,  0>
+position=<-3,  6> velocity=< 2, -1>
+
+Each line represents one point. Positions are given as <X, Y> pairs: X represents how far left (negative) or right (positive) the point appears, while Y represents how far up (negative) or down (positive) the point appears.
+
+At 0 seconds, each point has the position given. Each second, each point's velocity is added to its position. So, a point with velocity <1, -2> is moving to the right, but is moving upward twice as quickly. If this point's initial position were <3, 9>, after 3 seconds, its position would become <6, 3>.
+
+Over time, the points listed above would move like this:
+
+Initially:
+........#.............
+................#.....
+.........#.#..#.......
+......................
+#..........#.#.......#
+...............#......
+....#.................
+..#.#....#............
+.......#..............
+......#...............
+...#...#.#...#........
+....#..#..#.........#.
+.......#..............
+...........#..#.......
+#...........#.........
+...#.......#..........
+
+After 1 second:
+......................
+......................
+..........#....#......
+........#.....#.......
+..#.........#......#..
+......................
+......#...............
+....##.........#......
+......#.#.............
+.....##.##..#.........
+........#.#...........
+........#...#.....#...
+..#...........#.......
+....#.....#.#.........
+......................
+......................
+
+After 2 seconds:
+......................
+......................
+......................
+..............#.......
+....#..#...####..#....
+......................
+........#....#........
+......#.#.............
+.......#...#..........
+.......#..#..#.#......
+....#....#.#..........
+.....#...#...##.#.....
+........#.............
+......................
+......................
+......................
+
+After 3 seconds:
+......................
+......................
+......................
+......................
+......#...#..###......
+......#...#...#.......
+......#...#...#.......
+......#####...#.......
+......#...#...#.......
+......#...#...#.......
+......#...#...#.......
+......#...#..###......
+......................
+......................
+......................
+......................
+
+After 4 seconds:
+......................
+......................
+......................
+............#.........
+........##...#.#......
+......#.....#..#......
+.....#..##.##.#.......
+.......##.#....#......
+...........#....#.....
+..............#.......
+....#......#...#......
+.....#.....##.........
+...............#......
+...............#......
+......................
+......................
+
+After 3 seconds, the message appeared briefly: HI. Of course, your message will be much longer and will take many more seconds to appear.
+
+What message will eventually appear in the sky?
+
+Your puzzle answer was GEJKHGHZ.
+--- Part Two ---
+
+Good thing you didn't have to wait, because that would have taken a long time - much longer than the 3 seconds in the example above.
+
+Impressed by your sub-hour communication capabilities, the Elves are curious: exactly how many seconds would they have needed to wait for that message to appear?
+
+Your puzzle answer was 10681.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+#+BEGIN_SRC python :results output
+import re
+def f(endsec, input):
+  input = [ map(int, re.findall("-?[0-9]+", line)) for line in input ]
+
+  for _ in xrange(endsec):
+    input = [ (x+dx, y+dy, dx, dy) for (x,y,dx,dy) in input ]
+
+  maxx = max([ x for (x,y,dx,dt) in input ])
+  maxy = max([ y for (x,y,dx,dt) in input ])
+  a = []
+  for y in range(maxy+1):
+    row = []
+    for x in range(maxx+1):
+      row.append('.')
+    a.append(row)
+
+  for (x,y,dx,dy) in input:
+    a[y][x] = '#'
+  
+  for y in range(maxy+1):
+    line = []
+    for x in range(maxx+1):
+      line.append(a[y][x])
+    print("".join(line))
+
+#print f(3, ["position=< 9,  1> velocity=< 0,  2>", "position=< 7,  0> velocity=<-1,  0>","position=< 3, -2> velocity=<-1,  1>", "position=< 6, 10> velocity=<-2, -1>","position=< 2, -4> velocity=< 2,  2>", "position=<-6, 10> velocity=< 2, -2>","position=< 1,  8> velocity=< 1, -1>", "position=< 1,  7> velocity=< 1,  0>","position=<-3, 11> velocity=< 1, -2>", "position=< 7,  6> velocity=<-1, -1>","position=<-2,  3> velocity=< 1,  0>", "position=<-4,  3> velocity=< 2,  0>","position=<10, -3> velocity=<-1,  1>", "position=< 5, 11> velocity=< 1, -2>","position=< 4,  7> velocity=< 0, -1>", "position=< 8, -2> velocity=< 0,  1>","position=<15,  0> velocity=<-2,  0>", "position=< 1,  6> velocity=< 1,  0>","position=< 8,  9> velocity=< 0, -1>", "position=< 3,  3> velocity=<-1,  1>","position=< 0,  5> velocity=< 0, -1>", "position=<-2,  2> velocity=< 2,  0>","position=< 5, -2> velocity=< 1,  2>", "position=< 1,  4> velocity=< 2,  1>","position=<-2,  7> velocity=< 2, -2>", "position=< 3,  6> velocity=<-1, -1>","position=< 5,  0> velocity=< 1,  0>", "position=<-6,  0> velocity=< 2,  0>","position=< 5,  9> velocity=< 1, -2>", "position=<14,  7> velocity=<-2,  0>","position=<-3,  6> velocity=< 2, -1>"])
+print f(0, list(open("10.txt")))
+#+END_SRC
+
+#+RESULTS:
+: #...#..###
+: #...#...#.
+: #...#...#.
+: #####...#.
+: #...#...#.
+: #...#...#.
+: #...#...#.
+: #...#..###
+: None
+
+** part 1 B
+#+BEGIN_SRC python :results output
+import re
+from collections import defaultdict
+from PIL import Image
+
+def f(endsec, input):
+  input = [ map(int, re.findall("-?[0-9]+", line)) for line in input ]
+  input = [ (x+dx*endsec, y+dy*endsec, dx, dy) for (x,y,dx,dy) in input ]
+
+  s = set()
+  a = defaultdict(lambda: '.')
+  for (x,y,dx,dy) in input:
+    a[(x,y)] = "#"
+    s.add((x,y))
+  
+  maxx = max([ x for (x,y,dx,dt) in input ])+1
+  maxy = max([ y for (x,y,dx,dt) in input ])+1
+  print(maxx, maxy)
+  img = Image.new("RGB", (maxx, maxy), "#FFFFFF")
+  imgdata = []
+  for y in range(maxy):
+    for x in range(maxx):
+      if (x,y) in s:
+        imgdata.append((0,0,0))
+      else:
+        imgdata.append((255,255,255))
+  img.putdata(imgdata)
+  img.save("/tmp/a.png", "PNG")
+
+#print f(3, ["position=< 9,  1> velocity=< 0,  2>", "position=< 7,  0> velocity=<-1,  0>","position=< 3, -2> velocity=<-1,  1>", "position=< 6, 10> velocity=<-2, -1>","position=< 2, -4> velocity=< 2,  2>", "position=<-6, 10> velocity=< 2, -2>","position=< 1,  8> velocity=< 1, -1>", "position=< 1,  7> velocity=< 1,  0>","position=<-3, 11> velocity=< 1, -2>", "position=< 7,  6> velocity=<-1, -1>","position=<-2,  3> velocity=< 1,  0>", "position=<-4,  3> velocity=< 2,  0>","position=<10, -3> velocity=<-1,  1>", "position=< 5, 11> velocity=< 1, -2>","position=< 4,  7> velocity=< 0, -1>", "position=< 8, -2> velocity=< 0,  1>","position=<15,  0> velocity=<-2,  0>", "position=< 1,  6> velocity=< 1,  0>","position=< 8,  9> velocity=< 0, -1>", "position=< 3,  3> velocity=<-1,  1>","position=< 0,  5> velocity=< 0, -1>", "position=<-2,  2> velocity=< 2,  0>","position=< 5, -2> velocity=< 1,  2>", "position=< 1,  4> velocity=< 2,  1>","position=<-2,  7> velocity=< 2, -2>", "position=< 3,  6> velocity=<-1, -1>","position=< 5,  0> velocity=< 1,  0>", "position=<-6,  0> velocity=< 2,  0>","position=< 5,  9> velocity=< 1, -2>", "position=<14,  7> velocity=<-2,  0>","position=<-3,  6> velocity=< 2, -1>"])
+print f(1, list(open("10.txt")))
+
+#img = Image.new("RGB", (100, 100), "#ffffff")
+#img.putdata([(1,1,1), (2,2,2), (3,3,3)])
+#img.save("/tmp/a.png", "PNG")
+#+END_SRC
+
+#+RESULTS:
+: STDERR:
+
+** part 1 C
+#+BEGIN_SRC python :results output
+import re
+from collections import defaultdict
+from PIL import Image
+
+def f(endsec, input):
+  input = [ map(int, re.findall("-?[0-9]+", line)) for line in input ]
+  input = [ (x+dx*endsec, y+dy*endsec, dx, dy) for (x,y,dx,dy) in input ]
+
+  s = set()
+  a = defaultdict(lambda: '.')
+  for (x,y,dx,dy) in input:
+    a[(x,y)] = "#"
+    s.add((x,y))
+  
+  maxx = max([ x for (x,y,dx,dt) in input ])+1
+  maxy = max([ y for (x,y,dx,dt) in input ])+1
+  print(maxx, maxy, maxx*maxy/1000000)
+  return
+  f = open("/tmp/10.txt", "w")
+  for y in range(maxy):
+    for x in range(maxx):
+      if (x,y) in s:
+        f.write('#')
+      else:
+        f.write('.')
+    f.write('\n')
+  f.close()
+
+#print f(3, ["position=< 9,  1> velocity=< 0,  2>", "position=< 7,  0> velocity=<-1,  0>","position=< 3, -2> velocity=<-1,  1>", "position=< 6, 10> velocity=<-2, -1>","position=< 2, -4> velocity=< 2,  2>", "position=<-6, 10> velocity=< 2, -2>","position=< 1,  8> velocity=< 1, -1>", "position=< 1,  7> velocity=< 1,  0>","position=<-3, 11> velocity=< 1, -2>", "position=< 7,  6> velocity=<-1, -1>","position=<-2,  3> velocity=< 1,  0>", "position=<-4,  3> velocity=< 2,  0>","position=<10, -3> velocity=<-1,  1>", "position=< 5, 11> velocity=< 1, -2>","position=< 4,  7> velocity=< 0, -1>", "position=< 8, -2> velocity=< 0,  1>","position=<15,  0> velocity=<-2,  0>", "position=< 1,  6> velocity=< 1,  0>","position=< 8,  9> velocity=< 0, -1>", "position=< 3,  3> velocity=<-1,  1>","position=< 0,  5> velocity=< 0, -1>", "position=<-2,  2> velocity=< 2,  0>","position=< 5, -2> velocity=< 1,  2>", "position=< 1,  4> velocity=< 2,  1>","position=<-2,  7> velocity=< 2, -2>", "position=< 3,  6> velocity=<-1, -1>","position=< 5,  0> velocity=< 1,  0>", "position=<-6,  0> velocity=< 2,  0>","position=< 5,  9> velocity=< 1, -2>", "position=<14,  7> velocity=<-2,  0>","position=<-3,  6> velocity=< 2, -1>"])
+print f(1, list(open("10.txt")))
+
+#img = Image.new("RGB", (100, 100), "#ffffff")
+#img.putdata([(1,1,1), (2,2,2), (3,3,3)])
+#img.save("/tmp/a.png", "PNG")
+#+END_SRC
+
+#+RESULTS:
+: (53648, 53597, 2875)
+: None
+
+** part 1 D
+#+BEGIN_SRC python :results output
+import re
+
+def f(input):
+  input = [ map(int, re.findall("-?[0-9]+", line)) for line in input ]
+
+  mininput = None
+  minsize = 9999999999999
+  for _ in range(100000):
+    input = [ (x+dx, y+dy, dx, dy) for (x,y,dx,dy) in input ]
+    maxx = max([ x for (x,y,dx,dt) in input ])+1
+    maxy = max([ y for (x,y,dx,dt) in input ])+1
+    size = maxx * maxy
+    if size < minsize:
+      minsize = size
+      mininput = list(input)
+
+  input = mininput
+
+  minx = min([ x for (x,y,dx,dt) in input ])
+  miny = min([ y for (x,y,dx,dt) in input ])
+  input = [ (x-minx, y-miny, dx, dy) for (x,y,dx,dy) in input ]
+
+  s = set()
+  for (x,y,dx,dy) in input:
+    s.add((x,y))
+
+  maxx = max([ x for (x,y,dx,dt) in input ])+1
+  maxy = max([ y for (x,y,dx,dt) in input ])+1
+
+  for y in xrange(maxy):
+    line = []
+    for x in xrange(maxx):
+      if (x,y) in s:
+        line.append("#")
+      else:
+        line.append(".")
+    print("".join(line))
+
+  #print(maxx, maxy)
+  #f = open("/tmp/10.html", "w")
+  #f.write('<svg width="%d" height="%d">\n' % (maxx, maxy))
+  #for (x,y,dx,dy) in input:
+  #  f.write('<rect x="%d" y="%d" width="1" height="1" fill="#FF0000" />\n' % (x, y))
+  #f.write('</svg>\n')
+  #f.close()
+
+#print f(3, ["position=< 9,  1> velocity=< 0,  2>", "position=< 7,  0> velocity=<-1,  0>","position=< 3, -2> velocity=<-1,  1>", "position=< 6, 10> velocity=<-2, -1>","position=< 2, -4> velocity=< 2,  2>", "position=<-6, 10> velocity=< 2, -2>","position=< 1,  8> velocity=< 1, -1>", "position=< 1,  7> velocity=< 1,  0>","position=<-3, 11> velocity=< 1, -2>", "position=< 7,  6> velocity=<-1, -1>","position=<-2,  3> velocity=< 1,  0>", "position=<-4,  3> velocity=< 2,  0>","position=<10, -3> velocity=<-1,  1>", "position=< 5, 11> velocity=< 1, -2>","position=< 4,  7> velocity=< 0, -1>", "position=< 8, -2> velocity=< 0,  1>","position=<15,  0> velocity=<-2,  0>", "position=< 1,  6> velocity=< 1,  0>","position=< 8,  9> velocity=< 0, -1>", "position=< 3,  3> velocity=<-1,  1>","position=< 0,  5> velocity=< 0, -1>", "position=<-2,  2> velocity=< 2,  0>","position=< 5, -2> velocity=< 1,  2>", "position=< 1,  4> velocity=< 2,  1>","position=<-2,  7> velocity=< 2, -2>", "position=< 3,  6> velocity=<-1, -1>","position=< 5,  0> velocity=< 1,  0>", "position=<-6,  0> velocity=< 2,  0>","position=< 5,  9> velocity=< 1, -2>", "position=<14,  7> velocity=<-2,  0>","position=<-3,  6> velocity=< 2, -1>"])
+f(list(open("10.txt")))
+
+#img = Image.new("RGB", (100, 100), "#ffffff")
+#img.putdata([(1,1,1), (2,2,2), (3,3,3)])
+#img.save("/tmp/a.png", "PNG")
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+.####...######.....###..#....#..#....#...####...#....#..######
+#....#..#...........#...#...#...#....#..#....#..#....#.......#
+#.......#...........#...#..#....#....#..#.......#....#.......#
+#.......#...........#...#.#.....#....#..#.......#....#......#.
+#.......#####.......#...##......######..#.......######.....#..
+#..###..#...........#...##......#....#..#..###..#....#....#...
+#....#..#...........#...#.#.....#....#..#....#..#....#...#....
+#....#..#.......#...#...#..#....#....#..#....#..#....#..#.....
+#...##..#.......#...#...#...#...#....#..#...##..#....#..#.....
+.###.#..######...###....#....#..#....#...###.#..#....#..######
+None
+#+end_example
+
+ - GEJKHGHZ
+
+** part 2
+#+BEGIN_SRC python :results output
+import re
+
+def f(input):
+  input = [ map(int, re.findall("-?[0-9]+", line)) for line in input ]
+
+  for sec in range(100000):
+    oldsize = max([ x for (x,y,dx,dt) in input ]) * max([ y for (x,y,dx,dt) in input ])
+    input = [ (x+dx, y+dy, dx, dy) for (x,y,dx,dy) in input ]
+    newsize = max([ x for (x,y,dx,dt) in input ]) * max([ y for (x,y,dx,dt) in input ])
+    if newsize > oldsize:
+      return sec
+
+#print f(["position=< 9,  1> velocity=< 0,  2>", "position=< 7,  0> velocity=<-1,  0>","position=< 3, -2> velocity=<-1,  1>", "position=< 6, 10> velocity=<-2, -1>","position=< 2, -4> velocity=< 2,  2>", "position=<-6, 10> velocity=< 2, -2>","position=< 1,  8> velocity=< 1, -1>", "position=< 1,  7> velocity=< 1,  0>","position=<-3, 11> velocity=< 1, -2>", "position=< 7,  6> velocity=<-1, -1>","position=<-2,  3> velocity=< 1,  0>", "position=<-4,  3> velocity=< 2,  0>","position=<10, -3> velocity=<-1,  1>", "position=< 5, 11> velocity=< 1, -2>","position=< 4,  7> velocity=< 0, -1>", "position=< 8, -2> velocity=< 0,  1>","position=<15,  0> velocity=<-2,  0>", "position=< 1,  6> velocity=< 1,  0>","position=< 8,  9> velocity=< 0, -1>", "position=< 3,  3> velocity=<-1,  1>","position=< 0,  5> velocity=< 0, -1>", "position=<-2,  2> velocity=< 2,  0>","position=< 5, -2> velocity=< 1,  2>", "position=< 1,  4> velocity=< 2,  1>","position=<-2,  7> velocity=< 2, -2>", "position=< 3,  6> velocity=<-1, -1>","position=< 5,  0> velocity=< 1,  0>", "position=<-6,  0> velocity=< 2,  0>","position=< 5,  9> velocity=< 1, -2>", "position=<14,  7> velocity=<-2,  0>","position=<-3,  6> velocity=< 2, -1>"])
+print(f(list(open("10.txt"))))
+#+END_SRC
+
+#+RESULTS:
+: 10681
+
+ - GEJKHGHZ
