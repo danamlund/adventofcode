@@ -4677,6 +4677,88 @@ Both parts of this puzzle are complete! They provide two gold stars: **
 
  - <2018-12-16 Sun 16:56>
 * day 16
+** puzzle
+--- Day 16: Chronal Classification ---
+
+As you see the Elves defend their hot chocolate successfully, you go back to falling through time. This is going to become a problem.
+
+If you're ever going to return to your own time, you need to understand how this device on your wrist works. You have a little while before you reach your next destination, and with a bit of trial and error, you manage to pull up a programming manual on the device's tiny screen.
+
+According to the manual, the device has four registers (numbered 0 through 3) that can be manipulated by instructions containing one of 16 opcodes. The registers start with the value 0.
+
+Every instruction consists of four values: an opcode, two inputs (named A and B), and an output (named C), in that order. The opcode specifies the behavior of the instruction and how the inputs are interpreted. The output, C, is always treated as a register.
+
+In the opcode descriptions below, if something says "value A", it means to take the number given as A literally. (This is also called an "immediate" value.) If something says "register A", it means to use the number given as A to read from (or write to) the register with that number. So, if the opcode addi adds register A and value B, storing the result in register C, and the instruction addi 0 7 3 is encountered, it would add 7 to the value contained by register 0 and store the sum in register 3, never modifying registers 0, 1, or 2 in the process.
+
+Many opcodes are similar except for how they interpret their arguments. The opcodes fall into seven general categories:
+
+Addition:
+
+    addr (add register) stores into register C the result of adding register A and register B.
+    addi (add immediate) stores into register C the result of adding register A and value B.
+
+Multiplication:
+
+    mulr (multiply register) stores into register C the result of multiplying register A and register B.
+    muli (multiply immediate) stores into register C the result of multiplying register A and value B.
+
+Bitwise AND:
+
+    banr (bitwise AND register) stores into register C the result of the bitwise AND of register A and register B.
+    bani (bitwise AND immediate) stores into register C the result of the bitwise AND of register A and value B.
+
+Bitwise OR:
+
+    borr (bitwise OR register) stores into register C the result of the bitwise OR of register A and register B.
+    bori (bitwise OR immediate) stores into register C the result of the bitwise OR of register A and value B.
+
+Assignment:
+
+    setr (set register) copies the contents of register A into register C. (Input B is ignored.)
+    seti (set immediate) stores value A into register C. (Input B is ignored.)
+
+Greater-than testing:
+
+    gtir (greater-than immediate/register) sets register C to 1 if value A is greater than register B. Otherwise, register C is set to 0.
+    gtri (greater-than register/immediate) sets register C to 1 if register A is greater than value B. Otherwise, register C is set to 0.
+    gtrr (greater-than register/register) sets register C to 1 if register A is greater than register B. Otherwise, register C is set to 0.
+
+Equality testing:
+
+    eqir (equal immediate/register) sets register C to 1 if value A is equal to register B. Otherwise, register C is set to 0.
+    eqri (equal register/immediate) sets register C to 1 if register A is equal to value B. Otherwise, register C is set to 0.
+    eqrr (equal register/register) sets register C to 1 if register A is equal to register B. Otherwise, register C is set to 0.
+
+Unfortunately, while the manual gives the name of each opcode, it doesn't seem to indicate the number. However, you can monitor the CPU to see the contents of the registers before and after instructions are executed to try to work them out. Each opcode has a number from 0 through 15, but the manual doesn't say which is which. For example, suppose you capture the following sample:
+
+Before: [3, 2, 1, 1]
+9 2 1 2
+After:  [3, 2, 2, 1]
+
+This sample shows the effect of the instruction 9 2 1 2 on the registers. Before the instruction is executed, register 0 has value 3, register 1 has value 2, and registers 2 and 3 have value 1. After the instruction is executed, register 2's value becomes 2.
+
+The instruction itself, 9 2 1 2, means that opcode 9 was executed with A=2, B=1, and C=2. Opcode 9 could be any of the 16 opcodes listed above, but only three of them behave in a way that would cause the result shown in the sample:
+
+    Opcode 9 could be mulr: register 2 (which has a value of 1) times register 1 (which has a value of 2) produces 2, which matches the value stored in the output register, register 2.
+    Opcode 9 could be addi: register 2 (which has a value of 1) plus value 1 produces 2, which matches the value stored in the output register, register 2.
+    Opcode 9 could be seti: value 2 matches the value stored in the output register, register 2; the number given for B is irrelevant.
+
+None of the other opcodes produce the result captured in the sample. Because of this, the sample above behaves like three opcodes.
+
+You collect many of these samples (the first section of your puzzle input). The manual also includes a small test program (the second section of your puzzle input) - you can ignore it for now.
+
+Ignoring the opcode numbers, how many samples in your puzzle input behave like three or more opcodes?
+
+Your puzzle answer was 521.
+--- Part Two ---
+
+Using the samples you collected, work out the number of each opcode and execute the test program (the second section of your puzzle input).
+
+What value is contained in register 0 after executing the test program?
+
+Your puzzle answer was 594.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
 ** part 1
  - <2018-12-16 Sun 19:01>
 #+BEGIN_SRC python :results output
@@ -4846,6 +4928,173 @@ Both parts of this puzzle are complete! They provide two gold stars: **
 
  - 594 <2018-12-16 Sun 20:16>
 * day 17
+** puzzle
+--- Day 17: Reservoir Research ---
+
+You arrive in the year 18. If it weren't for the coat you got in 1018, you would be very cold: the North Pole base hasn't even been constructed.
+
+Rather, it hasn't been constructed yet. The Elves are making a little progress, but there's not a lot of liquid water in this climate, so they're getting very dehydrated. Maybe there's more underground?
+
+You scan a two-dimensional vertical slice of the ground nearby and discover that it is mostly sand with veins of clay. The scan only provides data with a granularity of square meters, but it should be good enough to determine how much water is trapped there. In the scan, x represents the distance to the right, and y represents the distance down. There is also a spring of water near the surface at x=500, y=0. The scan identifies which square meters are clay (your puzzle input).
+
+For example, suppose your scan shows the following veins of clay:
+
+x=495, y=2..7
+y=7, x=495..501
+x=501, y=3..7
+x=498, y=2..4
+x=506, y=1..2
+x=498, y=10..13
+x=504, y=10..13
+y=13, x=498..504
+
+Rendering clay as #, sand as ., and the water spring as +, and with x increasing to the right and y increasing downward, this becomes:
+
+   44444455555555
+   99999900000000
+   45678901234567
+ 0 ......+.......
+ 1 ............#.
+ 2 .#..#.......#.
+ 3 .#..#..#......
+ 4 .#..#..#......
+ 5 .#.....#......
+ 6 .#.....#......
+ 7 .#######......
+ 8 ..............
+ 9 ..............
+10 ....#.....#...
+11 ....#.....#...
+12 ....#.....#...
+13 ....#######...
+
+The spring of water will produce water forever. Water can move through sand, but is blocked by clay. Water always moves down when possible, and spreads to the left and right otherwise, filling space that has clay on both sides and falling out otherwise.
+
+For example, if five squares of water are created, they will flow downward until they reach the clay and settle there. Water that has come to rest is shown here as ~, while sand through which water has passed (but which is now dry again) is shown as |:
+
+......+.......
+......|.....#.
+.#..#.|.....#.
+.#..#.|#......
+.#..#.|#......
+.#....|#......
+.#~~~~~#......
+.#######......
+..............
+..............
+....#.....#...
+....#.....#...
+....#.....#...
+....#######...
+
+Two squares of water can't occupy the same location. If another five squares of water are created, they will settle on the first five, filling the clay reservoir a little more:
+
+......+.......
+......|.....#.
+.#..#.|.....#.
+.#..#.|#......
+.#..#.|#......
+.#~~~~~#......
+.#~~~~~#......
+.#######......
+..............
+..............
+....#.....#...
+....#.....#...
+....#.....#...
+....#######...
+
+Water pressure does not apply in this scenario. If another four squares of water are created, they will stay on the right side of the barrier, and no water will reach the left side:
+
+......+.......
+......|.....#.
+.#..#.|.....#.
+.#..#~~#......
+.#..#~~#......
+.#~~~~~#......
+.#~~~~~#......
+.#######......
+..............
+..............
+....#.....#...
+....#.....#...
+....#.....#...
+....#######...
+
+At this point, the top reservoir overflows. While water can reach the tiles above the surface of the water, it cannot settle there, and so the next five squares of water settle like this:
+
+......+.......
+......|.....#.
+.#..#||||...#.
+.#..#~~#|.....
+.#..#~~#|.....
+.#~~~~~#|.....
+.#~~~~~#|.....
+.#######|.....
+........|.....
+........|.....
+....#...|.#...
+....#...|.#...
+....#~~~~~#...
+....#######...
+
+Note especially the leftmost |: the new squares of water can reach this tile, but cannot stop there. Instead, eventually, they all fall to the right and settle in the reservoir below.
+
+After 10 more squares of water, the bottom reservoir is also full:
+
+......+.......
+......|.....#.
+.#..#||||...#.
+.#..#~~#|.....
+.#..#~~#|.....
+.#~~~~~#|.....
+.#~~~~~#|.....
+.#######|.....
+........|.....
+........|.....
+....#~~~~~#...
+....#~~~~~#...
+....#~~~~~#...
+....#######...
+
+Finally, while there is nowhere left for the water to settle, it can reach a few more tiles before overflowing beyond the bottom of the scanned data:
+
+......+.......    (line not counted: above minimum y value)
+......|.....#.
+.#..#||||...#.
+.#..#~~#|.....
+.#..#~~#|.....
+.#~~~~~#|.....
+.#~~~~~#|.....
+.#######|.....
+........|.....
+...|||||||||..
+...|#~~~~~#|..
+...|#~~~~~#|..
+...|#~~~~~#|..
+...|#######|..
+...|.......|..    (line not counted: below maximum y value)
+...|.......|..    (line not counted: below maximum y value)
+...|.......|..    (line not counted: below maximum y value)
+
+How many tiles can be reached by the water? To prevent counting forever, ignore tiles with a y coordinate smaller than the smallest y coordinate in your scan data or larger than the largest one. Any x coordinate is valid. In this example, the lowest y coordinate given is 1, and the highest is 13, causing the water spring (in row 0) and the water falling off the bottom of the render (in rows 14 through infinity) to be ignored.
+
+So, in the example above, counting both water at rest (~) and other sand tiles the water can hypothetically reach (|), the total number of tiles the water can reach is 57.
+
+How many tiles can the water reach within the range of y values in your scan?
+
+Your puzzle answer was 31412.
+--- Part Two ---
+
+After a very long time, the water spring will run dry. How much water will be retained?
+
+In the example above, water that won't eventually drain out is shown as ~, a total of 29 tiles.
+
+How many water tiles are left after the water spring stops producing water and all remaining water not at rest has drained?
+
+Your puzzle answer was 25857.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
 ** part 1
  - <2018-12-22 Sat 15:40>
 #+BEGIN_SRC cpp :results output
@@ -5160,3 +5409,1097 @@ Both parts of this puzzle are complete! They provide two gold stars: **
 #+RESULTS:
 : = 25857
  - 25857 correct <2018-12-22 Sat 17:17>
+* day 18
+** puzzle
+--- Day 18: Settlers of The North Pole ---
+
+On the outskirts of the North Pole base construction project, many Elves are collecting lumber.
+
+The lumber collection area is 50 acres by 50 acres; each acre can be either open ground (.), trees (|), or a lumberyard (#). You take a scan of the area (your puzzle input).
+
+Strange magic is at work here: each minute, the landscape looks entirely different. In exactly one minute, an open acre can fill with trees, a wooded acre can be converted to a lumberyard, or a lumberyard can be cleared to open ground (the lumber having been sent to other projects).
+
+The change to each acre is based entirely on the contents of that acre as well as the number of open, wooded, or lumberyard acres adjacent to it at the start of each minute. Here, "adjacent" means any of the eight acres surrounding that acre. (Acres on the edges of the lumber collection area might have fewer than eight adjacent acres; the missing acres aren't counted.)
+
+In particular:
+
+    An open acre will become filled with trees if three or more adjacent acres contained trees. Otherwise, nothing happens.
+    An acre filled with trees will become a lumberyard if three or more adjacent acres were lumberyards. Otherwise, nothing happens.
+    An acre containing a lumberyard will remain a lumberyard if it was adjacent to at least one other lumberyard and at least one acre containing trees. Otherwise, it becomes open.
+
+These changes happen across all acres simultaneously, each of them using the state of all acres at the beginning of the minute and changing to their new form by the end of that same minute. Changes that happen during the minute don't affect each other.
+
+For example, suppose the lumber collection area is instead only 10 by 10 acres with this initial configuration:
+
+Initial state:
+.#.#...|#.
+.....#|##|
+.|..|...#.
+..|#.....#
+#.#|||#|#|
+...#.||...
+.|....|...
+||...#|.#|
+|.||||..|.
+...#.|..|.
+
+After 1 minute:
+.......##.
+......|###
+.|..|...#.
+..|#||...#
+..##||.|#|
+...#||||..
+||...|||..
+|||||.||.|
+||||||||||
+....||..|.
+
+After 2 minutes:
+.......#..
+......|#..
+.|.|||....
+..##|||..#
+..###|||#|
+...#|||||.
+|||||||||.
+||||||||||
+||||||||||
+.|||||||||
+
+After 3 minutes:
+.......#..
+....|||#..
+.|.||||...
+..###|||.#
+...##|||#|
+.||##|||||
+||||||||||
+||||||||||
+||||||||||
+||||||||||
+
+After 4 minutes:
+.....|.#..
+...||||#..
+.|.#||||..
+..###||||#
+...###||#|
+|||##|||||
+||||||||||
+||||||||||
+||||||||||
+||||||||||
+
+After 5 minutes:
+....|||#..
+...||||#..
+.|.##||||.
+..####|||#
+.|.###||#|
+|||###||||
+||||||||||
+||||||||||
+||||||||||
+||||||||||
+
+After 6 minutes:
+...||||#..
+...||||#..
+.|.###|||.
+..#.##|||#
+|||#.##|#|
+|||###||||
+||||#|||||
+||||||||||
+||||||||||
+||||||||||
+
+After 7 minutes:
+...||||#..
+..||#|##..
+.|.####||.
+||#..##||#
+||##.##|#|
+|||####|||
+|||###||||
+||||||||||
+||||||||||
+||||||||||
+
+After 8 minutes:
+..||||##..
+..|#####..
+|||#####|.
+||#...##|#
+||##..###|
+||##.###||
+|||####|||
+||||#|||||
+||||||||||
+||||||||||
+
+After 9 minutes:
+..||###...
+.||#####..
+||##...##.
+||#....###
+|##....##|
+||##..###|
+||######||
+|||###||||
+||||||||||
+||||||||||
+
+After 10 minutes:
+.||##.....
+||###.....
+||##......
+|##.....##
+|##.....##
+|##....##|
+||##.####|
+||#####|||
+||||#|||||
+||||||||||
+
+After 10 minutes, there are 37 wooded acres and 31 lumberyards. Multiplying the number of wooded acres by the number of lumberyards gives the total resource value after ten minutes: 37 * 31 = 1147.
+
+What will the total resource value of the lumber collection area be after 10 minutes?
+
+Your puzzle answer was 480150.
+--- Part Two ---
+
+This important natural resource will need to last for at least thousands of years. Are the Elves collecting this lumber sustainably?
+
+What will the total resource value of the lumber collection area be after 1000000000 minutes?
+
+Your puzzle answer was 233020.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2018-12-23 Sun 20:52>
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+
+  #define M 1000
+  char map[M][M];
+  char map2[M][M];
+  int width, height;
+
+  void read(FILE *f) {
+    char line[200];
+    int y = 0;
+    while (NULL != fgets(line, sizeof(line), f)) {
+      for (int x = 0; line[x] != '\n'; x++) {
+        map[y][x] = line[x];
+        if (x > width) width = x;
+        if (y > height) height = y;
+      }
+      y++;
+    }
+  }
+
+  void swapmaps(void) {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        char tmp = map[y][x];
+        map[y][x] = map2[y][x];
+        map2[y][x] = tmp;
+      }
+    }
+  }
+
+  void printmap(void) {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        printf("%c", map[y][x]);
+      }
+      printf("\n");
+    }
+  }
+
+  int adjacents(int x, int y, char match) {
+    int seen = 0;
+    for (int dy = -1; dy <= 1; dy++) {
+      for (int dx = -1; dx <= 1; dx++) {
+        if (dx == 0 && dy == 0) continue;
+        if (x+dx < 0 || x+dx > width) continue;
+        if (y+dy < 0 || y+dy > height) continue;
+        if (map[y+dy][x+dx] == match)
+          seen++;
+      }
+    }
+    return seen;
+  }
+
+  int tiles(char match) {
+    int seen = 0;
+    for (int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        if (map[y][x] == match)
+          seen++;
+      }
+    }
+    return seen;
+  }
+
+  void turn() {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        int grounds = adjacents(x, y, '.');
+        int trees = adjacents(x, y, '|');
+        int lumberyards = adjacents(x, y, '#');
+        if (map[y][x] == '.' && trees >= 3)
+          map2[y][x] = '|';
+        else if (map[y][x] == '|' && lumberyards >= 3)
+          map2[y][x] = '#';
+        else if (map[y][x] == '#' && (lumberyards == 0 || trees == 0))
+          map2[y][x] = '.';
+        else
+          map2[y][x] = map[y][x];
+        // printf("%d,%d%c%c: .%d |%d #%d\n", x, y, map[y][x], map2[y][x], grounds, trees, lumberyards);
+      }
+    }
+    swapmaps();
+  }
+
+  int main(int argc, char **args) {
+    read(fopen("18.txt", "r"));
+    //read(fopen("18_example1.txt", "r"));
+    for (int i = 0; i < 10; i++) {
+      // printf("\n");
+      // printmap();
+      turn();
+    }
+    printf("= %d\n", tiles('|') * tiles('#'));
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 480150
+ - 480150 correct <2018-12-23 Sun 21:33>
+** part 2
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+
+  #define M 1000
+  char map[M][M];
+  char map2[M][M];
+  char maps[M][M][M];
+  int width, height;
+
+  void read(FILE *f) {
+    char line[200];
+    int y = 0;
+    while (NULL != fgets(line, sizeof(line), f)) {
+      for (int x = 0; line[x] != '\n'; x++) {
+        map[y][x] = line[x];
+        if (x > width) width = x;
+        if (y > height) height = y;
+      }
+      y++;
+    }
+  }
+
+  void swapmaps(void) {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        char tmp = map[y][x];
+        map[y][x] = map2[y][x];
+        map2[y][x] = tmp;
+      }
+    }
+  }
+
+  void fillmap(char map2[M][M]) {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        map2[y][x] = map[y][x];
+      }
+    }
+  }
+
+  int samemap(char map2[M][M]) {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        if (map2[y][x] != map[y][x])
+          return 0;
+      }
+    }
+    return 1;
+  }
+
+  void printmap(void) {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        printf("%c", map[y][x]);
+      }
+      printf("\n");
+    }
+  }
+
+  void printmap2(char map[M][M]) {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        printf("%c", map[y][x]);
+      }
+      printf("\n");
+    }
+  }
+
+  int adjacents(int x, int y, char match) {
+    int seen = 0;
+    for (int dy = -1; dy <= 1; dy++) {
+      for (int dx = -1; dx <= 1; dx++) {
+        if (dx == 0 && dy == 0) continue;
+        if (x+dx < 0 || x+dx > width) continue;
+        if (y+dy < 0 || y+dy > height) continue;
+        if (map[y+dy][x+dx] == match)
+          seen++;
+      }
+    }
+    return seen;
+  }
+
+  int tiles(char match) {
+    int seen = 0;
+    for (int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        if (map[y][x] == match)
+          seen++;
+      }
+    }
+    return seen;
+  }
+
+  void turn() {
+    for(int y = 0; y <= height; y++) {
+      for (int x = 0; x <= width; x++) {
+        int grounds = adjacents(x, y, '.');
+        int trees = adjacents(x, y, '|');
+        int lumberyards = adjacents(x, y, '#');
+        if (map[y][x] == '.' && trees >= 3)
+          map2[y][x] = '|';
+        else if (map[y][x] == '|' && lumberyards >= 3)
+          map2[y][x] = '#';
+        else if (map[y][x] == '#' && (lumberyards == 0 || trees == 0))
+          map2[y][x] = '.';
+        else
+          map2[y][x] = map[y][x];
+        // printf("%d,%d%c%c: .%d |%d #%d\n", x, y, map[y][x], map2[y][x], grounds, trees, lumberyards);
+      }
+    }
+    swapmaps();
+  }
+
+  int findloop() {
+    read(fopen("18.txt", "r"));
+    //read(fopen("18_example1.txt", "r"));
+
+    for (int i = 0; i < 1000; i++) {
+      fillmap(maps[i]);
+      printf("\n");
+      printmap();
+      turn();
+      for (int j = 0; j < i; j++) {
+        if (samemap(maps[j])) {
+          printf("!!! %d = %d\n", i, j);
+          return 1;
+        }
+      }
+    }
+    // !!! 446 = 419
+    return 0;
+  }
+
+  int main(int argc, char **args) {
+    read(fopen("18.txt", "r"));
+
+    int match1 = 419;
+    int match2 = 446;
+    int matchlen = match2 - match1 + 1;
+
+    int left = 1000000000;
+    for (int i = 0; i < match1; i++) {
+      turn();
+      left--;
+    }
+
+    for(; left > matchlen; left -= matchlen);
+
+    for (; left > 0; left--) {
+      turn();
+    }
+    
+    printf("= %d\n", tiles('|') * tiles('#'));
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 233020
+
+ - 233020 correct <2018-12-23 Sun 21:55>
+
+* day 19
+** puzzle
+--- Day 19: Go With The Flow ---
+
+With the Elves well on their way constructing the North Pole base, you turn your attention back to understanding the inner workings of programming the device.
+
+You can't help but notice that the device's opcodes don't contain any flow control like jump instructions. The device's manual goes on to explain:
+
+"In programs where flow control is required, the instruction pointer can be bound to a register so that it can be manipulated directly. This way, setr/seti can function as absolute jumps, addr/addi can function as relative jumps, and other opcodes can cause truly fascinating effects."
+
+This mechanism is achieved through a declaration like #ip 1, which would modify register 1 so that accesses to it let the program indirectly access the instruction pointer itself. To compensate for this kind of binding, there are now six registers (numbered 0 through 5); the five not bound to the instruction pointer behave as normal. Otherwise, the same rules apply as the last time you worked with this device.
+
+When the instruction pointer is bound to a register, its value is written to that register just before each instruction is executed, and the value of that register is written back to the instruction pointer immediately after each instruction finishes execution. Afterward, move to the next instruction by adding one to the instruction pointer, even if the value in the instruction pointer was just updated by an instruction. (Because of this, instructions must effectively set the instruction pointer to the instruction before the one they want executed next.)
+
+The instruction pointer is 0 during the first instruction, 1 during the second, and so on. If the instruction pointer ever causes the device to attempt to load an instruction outside the instructions defined in the program, the program instead immediately halts. The instruction pointer starts at 0.
+
+It turns out that this new information is already proving useful: the CPU in the device is not very powerful, and a background process is occupying most of its time. You dump the background process' declarations and instructions to a file (your puzzle input), making sure to use the names of the opcodes rather than the numbers.
+
+For example, suppose you have the following program:
+
+#ip 0
+seti 5 0 1
+seti 6 0 2
+addi 0 1 0
+addr 1 2 3
+setr 1 0 0
+seti 8 0 4
+seti 9 0 5
+
+When executed, the following instructions are executed. Each line contains the value of the instruction pointer at the time the instruction started, the values of the six registers before executing the instructions (in square brackets), the instruction itself, and the values of the six registers after executing the instruction (also in square brackets).
+
+ip=0 [0, 0, 0, 0, 0, 0] seti 5 0 1 [0, 5, 0, 0, 0, 0]
+ip=1 [1, 5, 0, 0, 0, 0] seti 6 0 2 [1, 5, 6, 0, 0, 0]
+ip=2 [2, 5, 6, 0, 0, 0] addi 0 1 0 [3, 5, 6, 0, 0, 0]
+ip=4 [4, 5, 6, 0, 0, 0] setr 1 0 0 [5, 5, 6, 0, 0, 0]
+ip=6 [6, 5, 6, 0, 0, 0] seti 9 0 5 [6, 5, 6, 0, 0, 9]
+
+In detail, when running this program, the following events occur:
+
+    The first line (#ip 0) indicates that the instruction pointer should be bound to register 0 in this program. This is not an instruction, and so the value of the instruction pointer does not change during the processing of this line.
+    The instruction pointer contains 0, and so the first instruction is executed (seti 5 0 1). It updates register 0 to the current instruction pointer value (0), sets register 1 to 5, sets the instruction pointer to the value of register 0 (which has no effect, as the instruction did not modify register 0), and then adds one to the instruction pointer.
+    The instruction pointer contains 1, and so the second instruction, seti 6 0 2, is executed. This is very similar to the instruction before it: 6 is stored in register 2, and the instruction pointer is left with the value 2.
+    The instruction pointer is 2, which points at the instruction addi 0 1 0. This is like a relative jump: the value of the instruction pointer, 2, is loaded into register 0. Then, addi finds the result of adding the value in register 0 and the value 1, storing the result, 3, back in register 0. Register 0 is then copied back to the instruction pointer, which will cause it to end up 1 larger than it would have otherwise and skip the next instruction (addr 1 2 3) entirely. Finally, 1 is added to the instruction pointer.
+    The instruction pointer is 4, so the instruction setr 1 0 0 is run. This is like an absolute jump: it copies the value contained in register 1, 5, into register 0, which causes it to end up in the instruction pointer. The instruction pointer is then incremented, leaving it at 6.
+    The instruction pointer is 6, so the instruction seti 9 0 5 stores 9 into register 5. The instruction pointer is incremented, causing it to point outside the program, and so the program ends.
+
+What value is left in register 0 when the background process halts?
+
+Your puzzle answer was 2304.
+--- Part Two ---
+
+A new background process immediately spins up in its place. It appears identical, but on closer inspection, you notice that this time, register 0 started with the value 1.
+
+What value is left in register 0 when this new background process halts?
+
+Your puzzle answer was 28137600.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2018-12-24 Mon 11:08>
+#+BEGIN_SRC python :results output
+  import re
+  def ints(line):
+    return map(int, re.findall("[0-9]+", line))
+
+  def addr(regs, a, b, c):
+    regs[c] = regs[a] + regs[b]
+  def addi(regs, a, b, c):
+    regs[c] = regs[a] + b
+
+  def mulr(regs, a, b, c):
+    regs[c] = regs[a] * regs[b]
+  def muli(regs, a, b, c):
+    regs[c] = regs[a] * b
+
+  def banr(regs, a, b, c):
+    regs[c] = regs[a] & regs[b]
+  def bani(regs, a, b, c):
+    regs[c] = regs[a] & b
+
+  def borr(regs, a, b, c):
+    regs[c] = regs[a] | regs[b]
+  def bori(regs, a, b, c):
+    regs[c] = regs[a] | b
+
+  def setr(regs, a, b, c):
+    regs[c] = regs[a]
+  def seti(regs, a, b, c):
+    regs[c] = a
+
+  def gtir(regs, a, b, c):
+    regs[c] = int(a > regs[b])
+  def gtri(regs, a, b, c):
+    regs[c] = int(regs[a] > b)
+  def gtrr(regs, a, b, c):
+    regs[c] = int(regs[a] > regs[b])
+
+  def eqir(regs, a, b, c):
+    regs[c] = int(a == regs[b])
+  def eqri(regs, a, b, c):
+    regs[c] = int(regs[a] == b)
+  def eqrr(regs, a, b, c):
+    regs[c] = int(regs[a] == regs[b])
+
+  def f(input, ip):
+    opcodes = [addr,addi,mulr,muli,banr,bani,borr,bori,setr,seti,gtir,gtri,gtrr,eqir,eqri,eqrr]
+
+    input = [ line for line in input if line[0] != "#" ]
+
+    regs = [0, 0, 0, 0, 0, 0]
+
+    #ip=11 [0, 11, 0, 930, 11, 1] seti 2 4 4 [0, 11, 0, 930, 2, 1]
+
+    #ip=13 [1, 931, 1, 930, 13, 3] gtrr 5 3 2 [1, 931, 0, 930, 13, 3]
+
+    #while regs[ip] < len(input) and regs[ip] >= 0:
+    for i in xrange(6922935):
+      line = input[regs[ip]].split()
+      opcode = [ code for code in opcodes if line[0] == code.__name__ ][0]
+      a,b,c = map(int, line[1:])
+      oldregs = list(regs)
+      oldip = regs[ip]
+      # if regs[ip] == 11 and regs[1] == 5:
+      #    regs[1] = regs[3];
+      # if regs[ip] == 11 and regs[1] == 5 and regs[5] >= 1:
+      #    regs[1] = regs[3]/regs[5]
+      # if regs[ip] == 11 and regs[1] == regs[3]/regs[5]+2:
+      #    regs[1] = regs[3]
+      # if regs[ip] == 13 and regs[5] == 10:
+      #   regs[5] = regs[3]
+      opcode(regs, a, b, c)
+      ii = 17376
+      #if ii+1000 > i > ii-100:
+      #if regs[ip] == 13:
+      #if regs[ip] >= 11:
+      #if regs[0] == 6:
+      #if regs[0] != oldregs[0]:
+      #  print "%5d ip=%2d %25s %s %d %d %d %25s" % (i, oldip, oldregs, opcode.__name__, a, b, c, regs)
+      regs[ip] += 1
+      if regs[ip] >= len(input) or regs[ip] < 0:
+        print "%5d ip=%2d %25s %s %d %d %d %25s" % (i, oldip, oldregs, opcode.__name__, a, b, c, regs)
+        return regs[0]
+
+    return None
+
+  #print(f(["#ip 0", "seti 5 0 1", "seti 6 0 2", "addi 0 1 0", "addr 1 2 3", "setr 1 0 0", "seti 8 0 4", "seti 9 0 5"], 0))
+  #print(f(list(open("19.txt")), 4))
+
+  n = 930
+  sum = 0
+  for a in xrange(1, n+1):
+    if a * int(n/a) == n:
+      sum += a
+  print sum
+#+END_SRC
+
+#+RESULTS:
+: 2304
+
+
+ - 2304 correct <2018-12-24 Mon 11:37>
+** part 2
+ - <2018-12-24 Mon 11:08>
+#+BEGIN_SRC python :results output
+  import re
+  def ints(line):
+    return map(int, re.findall("[0-9]+", line))
+
+  def addr(regs, a, b, c):
+    regs[c] = regs[a] + regs[b]
+  def addi(regs, a, b, c):
+    regs[c] = regs[a] + b
+
+  def mulr(regs, a, b, c):
+    regs[c] = regs[a] * regs[b]
+  def muli(regs, a, b, c):
+    regs[c] = regs[a] * b
+
+  def banr(regs, a, b, c):
+    regs[c] = regs[a] & regs[b]
+  def bani(regs, a, b, c):
+    regs[c] = regs[a] & b
+
+  def borr(regs, a, b, c):
+    regs[c] = regs[a] | regs[b]
+  def bori(regs, a, b, c):
+    regs[c] = regs[a] | b
+
+  def setr(regs, a, b, c):
+    regs[c] = regs[a]
+  def seti(regs, a, b, c):
+    regs[c] = a
+
+  def gtir(regs, a, b, c):
+    regs[c] = int(a > regs[b])
+  def gtri(regs, a, b, c):
+    regs[c] = int(regs[a] > b)
+  def gtrr(regs, a, b, c):
+    regs[c] = int(regs[a] > regs[b])
+
+  def eqir(regs, a, b, c):
+    regs[c] = int(a == regs[b])
+  def eqri(regs, a, b, c):
+    regs[c] = int(regs[a] == b)
+  def eqrr(regs, a, b, c):
+    regs[c] = int(regs[a] == regs[b])
+
+  def f(input, ip):
+    opcodes = [addr,addi,mulr,muli,banr,bani,borr,bori,setr,seti,gtir,gtri,gtrr,eqir,eqri,eqrr]
+
+    input = [ line for line in input if line[0] != "#" ]
+
+    regs = [1, 0, 0, 0, 0, 0]
+
+    #ip=9 [0, 6, 0, 10551330, 9, 1] gtrr 1 3 2 [0, 6, 0, 10551330, 9, 1]
+    #ip=9 [0, 123, 0, 10551330, 9, 1] gtrr 1 3 2 [0, 123, 0, 10551330, 9, 1]
+    #regs = [0, 10551330, 0, 10551330, 9, 1]
+
+    #ip=13 [0, 10551331, 1, 10551330, 13, 3] gtrr 5 3 2 [0, 10551331, 0, 10551330, 13, 3]
+    #ip=13 [1, 10551331, 1, 10551330, 13, 2] gtrr 5 3 2 [1, 10551331, 0, 10551330, 13, 2]
+    #regs = [1, 10551331, 1, 10551330, 13, 10551331]
+
+    while regs[ip] < len(input) and regs[ip] >= 0:
+    #for _ in xrange(1000):
+      line = input[regs[ip]].split()
+      opcode = [ code for code in opcodes if line[0] == code.__name__ ][0]
+      a,b,c = map(int, line[1:])
+      oldregs = list(regs)
+      oldip = regs[ip]
+      if oldip == 9 and regs[1] == 5:
+        regs[1] = 10551331
+      if oldip == 13 and regs[5] == 5:
+        regs[5] = 10551331
+      opcode(regs, a, b, c)
+      print "ip=%d %s %s %d %d %d %s" % (oldip, oldregs, opcode.__name__, a, b, c, regs)
+      regs[ip] += 1
+
+    return regs[0]
+
+  #print(f(["#ip 0", "seti 5 0 1", "seti 6 0 2", "addi 0 1 0", "addr 1 2 3", "setr 1 0 0", "seti 8 0 4", "seti 9 0 5"], 0))
+  #print(f(list(open("19.txt")), 4))
+
+  n = 10551330
+  sum = 0
+  for a in xrange(1, n+1):
+    if a * int(n/a) == n:
+      sum += a
+  print sum
+
+#+END_SRC
+
+#+RESULTS:
+: 28137600
+
+ - 0 wrong <2018-12-24 Mon 12:09>
+ - 28137600 correct <2018-12-24 Mon 13:35>
+* day 20
+** puzzle
+--- Day 20: A Regular Map ---
+
+While you were learning about instruction pointers, the Elves made considerable progress. When you look up, you discover that the North Pole base construction project has completely surrounded you.
+
+The area you are in is made up entirely of rooms and doors. The rooms are arranged in a grid, and rooms only connect to adjacent rooms when a door is present between them.
+
+For example, drawing rooms as ., walls as #, doors as | or -, your current position as X, and where north is up, the area you're in might look like this:
+
+#####
+#.|.#
+#-###
+#.|X#
+#####
+
+You get the attention of a passing construction Elf and ask for a map. "I don't have time to draw out a map of this place - it's huge. Instead, I can give you directions to every room in the facility!" He writes down some directions on a piece of parchment and runs off. In the example above, the instructions might have been ^WNE$, a regular expression or "regex" (your puzzle input).
+
+The regex matches routes (like WNE for "west, north, east") that will take you from your current room through various doors in the facility. In aggregate, the routes will take you through every door in the facility at least once; mapping out all of these routes will let you build a proper map and find your way around.
+
+^ and $ are at the beginning and end of your regex; these just mean that the regex doesn't match anything outside the routes it describes. (Specifically, ^ matches the start of the route, and $ matches the end of it.) These characters will not appear elsewhere in the regex.
+
+The rest of the regex matches various sequences of the characters N (north), S (south), E (east), and W (west). In the example above, ^WNE$ matches only one route, WNE, which means you can move west, then north, then east from your current position. Sequences of letters like this always match that exact route in the same order.
+
+Sometimes, the route can branch. A branch is given by a list of options separated by pipes (|) and wrapped in parentheses. So, ^N(E|W)N$ contains a branch: after going north, you must choose to go either east or west before finishing your route by going north again. By tracing out the possible routes after branching, you can determine where the doors are and, therefore, where the rooms are in the facility.
+
+For example, consider this regex: ^ENWWW(NEEE|SSE(EE|N))$
+
+This regex begins with ENWWW, which means that from your current position, all routes must begin by moving east, north, and then west three times, in that order. After this, there is a branch. Before you consider the branch, this is what you know about the map so far, with doors you aren't sure about marked with a ?:
+
+#?#?#?#?#
+?.|.|.|.?
+#?#?#?#-#
+    ?X|.?
+    #?#?#
+
+After this point, there is (NEEE|SSE(EE|N)). This gives you exactly two options: NEEE and SSE(EE|N). By following NEEE, the map now looks like this:
+
+#?#?#?#?#
+?.|.|.|.?
+#-#?#?#?#
+?.|.|.|.?
+#?#?#?#-#
+    ?X|.?
+    #?#?#
+
+Now, only SSE(EE|N) remains. Because it is in the same parenthesized group as NEEE, it starts from the same room NEEE started in. It states that starting from that point, there exist doors which will allow you to move south twice, then east; this ends up at another branch. After that, you can either move east twice or north once. This information fills in the rest of the doors:
+
+#?#?#?#?#
+?.|.|.|.?
+#-#?#?#?#
+?.|.|.|.?
+#-#?#?#-#
+?.?.?X|.?
+#-#-#?#?#
+?.|.|.|.?
+#?#?#?#?#
+
+Once you've followed all possible routes, you know the remaining unknown parts are all walls, producing a finished map of the facility:
+
+#########
+#.|.|.|.#
+#-#######
+#.|.|.|.#
+#-#####-#
+#.#.#X|.#
+#-#-#####
+#.|.|.|.#
+#########
+
+Sometimes, a list of options can have an empty option, like (NEWS|WNSE|). This means that routes at this point could effectively skip the options in parentheses and move on immediately. For example, consider this regex and the corresponding map:
+
+^ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN$
+
+###########
+#.|.#.|.#.#
+#-###-#-#-#
+#.|.|.#.#.#
+#-#####-#-#
+#.#.#X|.#.#
+#-#-#####-#
+#.#.|.|.|.#
+#-###-###-#
+#.|.|.#.|.#
+###########
+
+This regex has one main route which, at three locations, can optionally include additional detours and be valid: (NEWS|), (WNSE|), and (SWEN|). Regardless of which option is taken, the route continues from the position it is left at after taking those steps. So, for example, this regex matches all of the following routes (and more that aren't listed here):
+
+    ENNWSWWSSSEENEENNN
+    ENNWSWWNEWSSSSEENEENNN
+    ENNWSWWNEWSSSSEENEESWENNNN
+    ENNWSWWSSSEENWNSEEENNN
+
+By following the various routes the regex matches, a full map of all of the doors and rooms in the facility can be assembled.
+
+To get a sense for the size of this facility, you'd like to determine which room is furthest from you: specifically, you would like to find the room for which the shortest path to that room would require passing through the most doors.
+
+    In the first example (^WNE$), this would be the north-east corner 3 doors away.
+    In the second example (^ENWWW(NEEE|SSE(EE|N))$), this would be the south-east corner 10 doors away.
+    In the third example (^ENNWSWW(NEWS|)SSSEEN(WNSE|)EE(SWEN|)NNN$), this would be the north-east corner 18 doors away.
+
+Here are a few more examples:
+
+Regex: ^ESSWWN(E|NNENN(EESS(WNSE|)SSS|WWWSSSSE(SW|NNNE)))$
+Furthest room requires passing 23 doors
+
+#############
+#.|.|.|.|.|.#
+#-#####-###-#
+#.#.|.#.#.#.#
+#-#-###-#-#-#
+#.#.#.|.#.|.#
+#-#-#-#####-#
+#.#.#.#X|.#.#
+#-#-#-###-#-#
+#.|.#.|.#.#.#
+###-#-###-#-#
+#.|.#.|.|.#.#
+#############
+
+Regex: ^WSSEESWWWNW(S|NENNEEEENN(ESSSSW(NWSW|SSEN)|WSWWN(E|WWS(E|SS))))$
+Furthest room requires passing 31 doors
+
+###############
+#.|.|.|.#.|.|.#
+#-###-###-#-#-#
+#.|.#.|.|.#.#.#
+#-#########-#-#
+#.#.|.|.|.|.#.#
+#-#-#########-#
+#.#.#.|X#.|.#.#
+###-#-###-#-#-#
+#.|.#.#.|.#.|.#
+#-###-#####-###
+#.|.#.|.|.#.#.#
+#-#-#####-#-#-#
+#.#.|.|.|.#.|.#
+###############
+
+What is the largest number of doors you would be required to pass through to reach a room? That is, find the room for which the shortest path from your starting location to that room would require passing through the most doors; what is the fewest doors you can pass through to reach it?
+
+Your puzzle answer was 3046.
+--- Part Two ---
+
+Okay, so the facility is big.
+
+How many rooms have a shortest path from your current location that pass through at least 1000 doors?
+
+Your puzzle answer was 8545.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+#+BEGIN_SRC cpp :results output varbatim
+  #include <stdio.h>
+
+  #define M 1000
+  unsigned char map[M][M];
+  int xmin = M/2;
+  int xmax = M/2;
+  int ymin = M/2;
+  int ymax = M/2;
+
+  void seenpos(int x, int y) {
+    if (x < xmin) xmin = x;
+    if (x > xmax) xmax = x;
+    if (y < ymin) ymin = y;
+    if (y > ymax) ymax = y;
+  }
+  void adddoor(int x, int y, char c) {
+    unsigned char dir = 0;
+    if (c == 'N') { adddoor(x, y-1, 'S'); return; }
+    if (c == 'E') { adddoor(x+1, y, 'W'); return; }
+    if (c == 'S') { dir += 1; seenpos(x,y); seenpos(x,y+1); }
+    if (c == 'W') { dir += 2; seenpos(x,y); seenpos(x-1,y); }
+    map[y][x] |= dir;
+  }
+  int isdoor(int x, int y, char c) {
+    if (c == 'N') return isdoor(x, y-1, 'S');
+    if (c == 'E') return isdoor(x+1, y, 'W');
+    if (c == 'S') return (map[y][x] & 1);
+    if (c == 'W') return (map[y][x] & 2);
+  }
+
+  void printmap() {
+    printf("x=%d..%d  y=%d..%d\n", xmin, xmax, ymin, ymax);
+    for (int y = ymin; y <= ymax; y++) {
+      for (int x = xmin; x <= xmax; x++) {
+        printf("#%c", isdoor(x, y, 'N')?'-':'#');
+      }
+      printf("#\n");
+      for (int x = xmin; x <= xmax; x++) {
+        if (x == M/2 && y == M/2)
+          printf("%cX", isdoor(x,y,'W')?'|':'#');
+        else
+          printf("%c.", isdoor(x,y,'W')?'|':'#');
+      }
+      printf("#\n");
+    }
+    for (int x = xmin; x <= xmax; x++) {
+      printf("##");
+    }
+    printf("#\n");
+  }
+
+  int parse(int x, int y, int i, const char *s) {
+    while (true) {
+      // printf("%3d,%3d %d=%c\n", M/2-x, M/2-y, i, s[i]);
+      if (s[i] == '^') i++;
+      else if (s[i] == '$') return i;
+      else if (s[i] == '(') {
+        while (s[i] != ')') {
+          i = parse(x, y, i+1, s);
+        }
+        i++;
+      } else if (s[i] == '|' || s[i] == ')') {
+        return i;
+      } else {
+        adddoor(x, y, s[i]);
+        if (s[i] == 'N') y--;
+        if (s[i] == 'E') x++;
+        if (s[i] == 'S') y++;
+        if (s[i] == 'W') x--;
+        i++;
+      }
+    }
+  }
+
+  void filldists(int x, int y, int dist, int dists[M][M]) {
+    if (dists[y][x] >= 0) return;
+    dists[y][x] = dist;
+    if (isdoor(x, y, 'N')) filldists(x, y-1, dist+1, dists);
+    if (isdoor(x, y, 'E')) filldists(x+1, y, dist+1, dists);
+    if (isdoor(x, y, 'S')) filldists(x, y+1, dist+1, dists);
+    if (isdoor(x, y, 'W')) filldists(x-1, y, dist+1, dists);
+  }
+
+  int furthest(FILE *f) {
+    char in[100000];
+
+    fread(in, sizeof(in), 1, f);
+
+    // printf("'%s'\n", in);
+    parse(M/2, M/2, 0, in);
+    //adddoor(M/2, M/2, 'E');
+
+    // printmap();
+
+    int dists[M][M];
+    for (int y = 0; y < M; y++) {
+      for (int x = 0; x < M; x++) {
+        dists[y][x] = -1;
+      }
+    }
+    filldists(M/2, M/2, 0, dists);
+    int maxdist = 0;
+    for (int y = ymin; y <= ymax; y++) {
+      for (int x = xmin; x <= xmax; x++) {
+        if (dists[y][x] > maxdist) {
+          maxdist = dists[y][x];
+        }
+        // printf("%2d ", dists[y][x]);
+      }
+      // printf("\n");
+    }
+
+    return maxdist;
+  }
+
+  int main(int argc, char **args) {
+    printf("= %d\n", furthest(fopen("20.txt", "r")));
+    // printf("= %d\n", furthest(fopen("20_example3.txt", "r")));
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 3046
+** part 2
+#+BEGIN_SRC cpp :results output varbatim
+  #include <stdio.h>
+
+  #define M 1000
+  unsigned char map[M][M];
+  int xmin = M/2;
+  int xmax = M/2;
+  int ymin = M/2;
+  int ymax = M/2;
+
+  void seenpos(int x, int y) {
+    if (x < xmin) xmin = x;
+    if (x > xmax) xmax = x;
+    if (y < ymin) ymin = y;
+    if (y > ymax) ymax = y;
+  }
+  void adddoor(int x, int y, char c) {
+    unsigned char dir = 0;
+    if (c == 'N') { adddoor(x, y-1, 'S'); return; }
+    if (c == 'E') { adddoor(x+1, y, 'W'); return; }
+    if (c == 'S') { dir += 1; seenpos(x,y); seenpos(x,y+1); }
+    if (c == 'W') { dir += 2; seenpos(x,y); seenpos(x-1,y); }
+    map[y][x] |= dir;
+  }
+  int isdoor(int x, int y, char c) {
+    if (c == 'N') return isdoor(x, y-1, 'S');
+    if (c == 'E') return isdoor(x+1, y, 'W');
+    if (c == 'S') return (map[y][x] & 1);
+    if (c == 'W') return (map[y][x] & 2);
+  }
+
+  void printmap() {
+    printf("x=%d..%d  y=%d..%d\n", xmin, xmax, ymin, ymax);
+    for (int y = ymin; y <= ymax; y++) {
+      for (int x = xmin; x <= xmax; x++) {
+        printf("#%c", isdoor(x, y, 'N')?'-':'#');
+      }
+      printf("#\n");
+      for (int x = xmin; x <= xmax; x++) {
+        if (x == M/2 && y == M/2)
+          printf("%cX", isdoor(x,y,'W')?'|':'#');
+        else
+          printf("%c.", isdoor(x,y,'W')?'|':'#');
+      }
+      printf("#\n");
+    }
+    for (int x = xmin; x <= xmax; x++) {
+      printf("##");
+    }
+    printf("#\n");
+  }
+
+  int parse(int x, int y, int i, const char *s) {
+    while (true) {
+      // printf("%3d,%3d %d=%c\n", M/2-x, M/2-y, i, s[i]);
+      if (s[i] == '^') i++;
+      else if (s[i] == '$') return i;
+      else if (s[i] == '(') {
+        while (s[i] != ')') {
+          i = parse(x, y, i+1, s);
+        }
+        i++;
+      } else if (s[i] == '|' || s[i] == ')') {
+        return i;
+      } else {
+        adddoor(x, y, s[i]);
+        if (s[i] == 'N') y--;
+        if (s[i] == 'E') x++;
+        if (s[i] == 'S') y++;
+        if (s[i] == 'W') x--;
+        i++;
+      }
+    }
+  }
+
+  void filldists(int x, int y, int dist, int dists[M][M]) {
+    if (dists[y][x] >= 0) return;
+    dists[y][x] = dist;
+    if (isdoor(x, y, 'N')) filldists(x, y-1, dist+1, dists);
+    if (isdoor(x, y, 'E')) filldists(x+1, y, dist+1, dists);
+    if (isdoor(x, y, 'S')) filldists(x, y+1, dist+1, dists);
+    if (isdoor(x, y, 'W')) filldists(x-1, y, dist+1, dists);
+  }
+
+  int furthest(FILE *f) {
+    char in[100000];
+
+    fread(in, sizeof(in), 1, f);
+
+    // printf("'%s'\n", in);
+    parse(M/2, M/2, 0, in);
+    //adddoor(M/2, M/2, 'E');
+
+    // printmap();
+
+    int dists[M][M];
+    for (int y = 0; y < M; y++) {
+      for (int x = 0; x < M; x++) {
+        dists[y][x] = -1;
+      }
+    }
+    filldists(M/2, M/2, 0, dists);
+    int num = 0;
+    int maxdist = 0;
+    for (int y = ymin; y <= ymax; y++) {
+      for (int x = xmin; x <= xmax; x++) {
+        if (dists[y][x] >= 1000) {
+          num++;
+        }
+        // printf("%2d ", dists[y][x]);
+      }
+      // printf("\n");
+    }
+
+    return num;
+  }
+
+  int main(int argc, char **args) {
+    printf("= %d\n", furthest(fopen("20.txt", "r")));
+    // printf("= %d\n", furthest(fopen("20_example3.txt", "r")));
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 8545
