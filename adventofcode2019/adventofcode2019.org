@@ -1008,3 +1008,651 @@ output 12234644
 
  - correct 3508186 <2019-12-05 Thu 19:04>
 
+* day 6
+** puzzle
+--- Day 6: Universal Orbit Map ---
+
+You've landed at the Universal Orbit Map facility on Mercury. Because navigation in space often involves transferring between orbits, the orbit maps here are useful for finding efficient routes between, for example, you and Santa. You download a map of the local orbits (your puzzle input).
+
+Except for the universal Center of Mass (COM), every object in space is in orbit around exactly one other object. An orbit looks roughly like this:
+
+                  \
+                   \
+                    |
+                    |
+AAA--> o            o <--BBB
+                    |
+                    |
+                   /
+                  /
+
+In this diagram, the object BBB is in orbit around AAA. The path that BBB takes around AAA (drawn with lines) is only partly shown. In the map data, this orbital relationship is written AAA)BBB, which means "BBB is in orbit around AAA".
+
+Before you use your map data to plot a course, you need to make sure it wasn't corrupted during the download. To verify maps, the Universal Orbit Map facility uses orbit count checksums - the total number of direct orbits (like the one shown above) and indirect orbits.
+
+Whenever A orbits B and B orbits C, then A indirectly orbits C. This chain can be any number of objects long: if A orbits B, B orbits C, and C orbits D, then A indirectly orbits D.
+
+For example, suppose you have the following map:
+
+COM)B
+B)C
+C)D
+D)E
+E)F
+B)G
+G)H
+D)I
+E)J
+J)K
+K)L
+
+Visually, the above map of orbits looks like this:
+
+        G - H       J - K - L
+       /           /
+COM - B - C - D - E - F
+               \
+                I
+
+In this visual representation, when two objects are connected by a line, the one on the right directly orbits the one on the left.
+
+Here, we can count the total number of orbits as follows:
+
+    D directly orbits C and indirectly orbits B and COM, a total of 3 orbits.
+    L directly orbits K and indirectly orbits J, E, D, C, B, and COM, a total of 7 orbits.
+    COM orbits nothing.
+
+The total number of direct and indirect orbits in this example is 42.
+
+What is the total number of direct and indirect orbits in your map data?
+
+Your puzzle answer was 119831.
+--- Part Two ---
+
+Now, you just need to figure out how many orbital transfers you (YOU) need to take to get to Santa (SAN).
+
+You start at the object YOU are orbiting; your destination is the object SAN is orbiting. An orbital transfer lets you move from any object to an object orbiting or orbited by that object.
+
+For example, suppose you have the following map:
+
+COM)B
+B)C
+C)D
+D)E
+E)F
+B)G
+G)H
+D)I
+E)J
+J)K
+K)L
+K)YOU
+I)SAN
+
+Visually, the above map of orbits looks like this:
+
+                          YOU
+                         /
+        G - H       J - K - L
+       /           /
+COM - B - C - D - E - F
+               \
+                I - SAN
+
+In this example, YOU are in orbit around K, and SAN is in orbit around I. To move from K to I, a minimum of 4 orbital transfers are required:
+
+    K to J
+    J to E
+    E to D
+    D to I
+
+Afterward, the map of orbits looks like this:
+
+        G - H       J - K - L
+       /           /
+COM - B - C - D - E - F
+               \
+                I - SAN
+                 \
+                  YOU
+
+What is the minimum number of orbital transfers required to move from the object YOU are orbiting to the object SAN is orbiting? (Between the objects they are orbiting - not between YOU and SAN.)
+
+Your puzzle answer was 322.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2019-12-07 Sat 10:37>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <string.h>
+#define DEBUG 0
+struct orbit {
+  char *orbiter;
+  char *orbitee;
+};
+int main(int argc, char **args) {
+  struct orbit orbits[1000];
+  
+  int orbiti = 0;
+  FILE *f = fopen("06.txt", "r");
+  char line[10];
+  while (NULL != fgets(line, 10, f)) {
+    *strchr(line, '\n') = 0;
+    char *orbiter = strchr(line, ')');
+    orbiter[0] = 0;
+    orbiter++;
+
+    orbits[orbiti].orbiter = strdup(orbiter);
+    orbits[orbiti].orbitee = strdup(line);
+    orbiti++;
+  }
+
+  int allorbitssum = 0;
+  for (int i = 0; i < orbiti; i++) {
+    char *orbitee = orbits[i].orbitee;
+    int orbitssum = 1;
+    int foundNewOrbitee = 1;
+    if (DEBUG) printf("## %s: %s", orbits[i].orbiter, orbitee);
+    while (foundNewOrbitee) {
+      foundNewOrbitee = 0;
+      for (int j = 0; j < orbiti; j++) {
+        if (0 == strcmp(orbitee, orbits[j].orbiter)) {
+          if (DEBUG) printf(", %s", orbits[j].orbitee);
+          foundNewOrbitee = 1;
+          orbitssum++;
+          orbitee = orbits[j].orbitee;
+          break;
+        }
+      }
+    }
+    if (DEBUG) printf("\n");
+    allorbitssum += orbitssum;
+  }
+
+  printf("= %d\n", allorbitssum);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 119831
+
+ - 119831 correct <2019-12-07 Sat 11:08>
+** part 2
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <string.h>
+  #define DEBUG 1
+  #define IDLEN 4
+  struct orbit {
+      char orbiter[IDLEN];
+      char orbitee[IDLEN];
+  };
+  int findOrbit(const char *orbiter, struct orbit *orbits) {
+      for (int i = 0; orbits[i].orbiter[0] != 0; i++) {
+          if (0 == strcmp(orbiter, orbits[i].orbiter)) {
+              return i;
+          }
+      }
+      printf("Not found!\n");
+      exit(0);
+      return 0;
+  }
+  void getOrbitees(char **orbitees, const char *orbiter, struct orbit *orbits) {
+      int i = findOrbit(orbiter, orbits);
+      printf("## %d\n", i);
+      char *orbitee = orbits[i].orbitee;
+      int k = 0;
+      orbitees[k++] = orbitee;
+      int foundNewOrbitee = 1;
+      if (DEBUG) printf("## %s: %s", orbits[i].orbiter, orbitee);
+      while (foundNewOrbitee) {
+          foundNewOrbitee = 0;
+          for (int j = 0; orbits[j].orbiter[0] != 0; j++) {
+              if (0 == strcmp(orbitee, orbits[j].orbiter)) {
+                  if (DEBUG) printf(", %s", orbits[j].orbitee);
+                  foundNewOrbitee = 1;
+                  orbitee = orbits[j].orbitee;
+                  orbitees[k++] = orbitee;
+                  break;
+              }
+          }
+      }
+      if (DEBUG) printf("\n");
+      orbitees[k] = NULL;
+  }
+  int main(int argc, char **args) {
+      struct orbit orbits[1000];
+
+      int orbiti = 0;
+      FILE *f = fopen("06.txt", "r");
+      char line[20];
+      while (NULL != fgets(line, 20, f)) {
+          ,*strchr(line, '\n') = 0;
+          char *orbiter = strchr(line, ')');
+          orbiter[0] = 0;
+          orbiter++;
+
+          strncpy(orbits[orbiti].orbiter, orbiter, IDLEN);
+          strncpy(orbits[orbiti].orbitee, line, IDLEN);
+          orbiti++;
+      }
+      orbits[orbiti].orbiter[0] = 0;
+      orbits[orbiti].orbitee[0] = 0;
+
+      char *youOrbitees[1000];
+      getOrbitees(youOrbitees, "YOU", orbits);
+      char *sanOrbitees[1000];
+      getOrbitees(sanOrbitees, "SAN", orbits);
+
+      for (int i = 0; youOrbitees[i] != NULL; i++) {
+          for (int j = 0; sanOrbitees[j] != NULL; j++) {
+              if (0 == strcmp(youOrbitees[i], sanOrbitees[j])) {
+                  printf("you %d(%s), san %d(%s)\n", i, youOrbitees[i], j, sanOrbitees[j]);
+                  printf("= %d\n", i + j);
+                  return 0;
+              }
+          }
+      }
+
+      //printf("= %d\n", allorbitssum);
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: ## 93
+: ## YOU: 3LN, 9LY, BNZ, 9Z9, MRM, VD5, LR4, BJH, Y7B, 9CB, PWQ, Y7M, 9KL, HRK, KB8, ZWJ, 14X, FWY, ZT8, 2JQ, NCQ, 4Q5, RMB, HQC, YHR, 7ZP, 49N, S9Z, HNB, BHR, 57R, R87, WF9, CN9, 66V, GHS, 9WF, NDM, DH1, RP8, 51Y, 4VK, 967, ZW2, 7Q6, 7J9, GKK, C5G, C2S, G6D, XQV, YHX, 5HT, NKG, RNM, HMN, FPB, T2B, WPF, B8Z, 82K, FQK, KW3, HX8, PS1, QS2, CK4, 7SQ, P1W, PSM, 2PT, FN8, H42, FJ2, 8D8, PWV, FRD, 9CJ, MK4, 66S, 2MQ, SCR, 8MQ, MXD, 8WJ, Q84, 25X, NHB, Q1L, GD9, JPY, 8WS, 4T5, F74, 6V1, FB6, DBK, LQR, JNL, 3VV, 62D, 2M9, CPQ, LVG, RCQ, 5HN, BN2, C4K, 25G, X4N, G5S, M29, 8TZ, 6MS, 689, 17B, MNL, XGN, Y64, YN2, MNY, CLX, YCW, 622, HMC, HML, 326, 58J, GQ1, MF7, SCQ, GMM, 22B, 14K, XDD, BG3, MR7, 5VH, N57, X94, 2PS, TVQ, 4XF, BFL, FCQ, 6LF, DFW, F62, MJN, Q4C, 21T, TDZ, 1Q1, 3XK, ZXH, JH5, BDC, DZ7, K6G, 6ZB, RRX, JTG, BDB, TQ8, ZJ3, LML, NJ2, LGH, 54W, 2QC, 45M, QD9, JNB, 3J9, Q1M, 3Q3, YJG, DQT, TJW, 31C, CKQ, NWT, V6S, WLB, 8F8, 2VV, ZVZ, 232, DNZ, T95, GNS, Y86, X2M, DSP, 888, QH5, FR8, W5Y, DHN, ZLF, 4Y2, LGS, WQY, 3BN, PS9, S87, JGB, 8K3, 632, NDH, KJ8, BGW, L7H, DT8, J6R, HGJ, LJH, 7Y9, PMX, 5MZ, R28, JSK, Z4V, YBF, NM6, GMP, 17N, PQP, 18D, LK7, CBJ, SCY, TV5, 8CC, 2NX, S14, QDL, CJW, S45, 6XS, TMR, 9T3, N7Y, L94, XQ6, QXF, BXW, COM
+: ## 31
+: ## SAN: Q8B, B4D, LL9, F89, J8T, ZL4, Q2W, 96Q, 14F, HQL, TJD, KRR, 3VR, 5BT, VC9, YYL, KDN, 82D, 2RN, LYJ, FTN, BSN, F7D, LX6, W6D, SF6, W5M, 8SP, NGV, PR8, FHY, 2PV, X9N, 5CV, XWS, YVZ, T7S, 1QJ, 8ZL, Z8W, Y9F, 1RH, RWX, FFY, QRY, RY5, DQ4, HBK, RHQ, YPK, LM3, J6S, 69V, T4H, GQ3, 511, JL3, SLS, K8K, 29K, 8F1, 3RD, DCJ, T1Z, 6R1, H12, Z2L, 5KX, DDD, MKY, VPH, P66, 67Y, K2M, GYG, D13, 99V, DZG, Y34, PDK, YDC, 1JP, JR9, WCS, GK8, HWF, FDR, SND, FF3, NF1, NYY, 2JM, WZ4, 8PM, R7R, RYS, QBT, J55, BTJ, M4Y, TQ4, JG6, 1YC, XWV, QKX, PDY, ZDY, NHF, KNC, 3GN, Y27, 57D, SC4, X2J, HYC, Z21, 2Y2, ZTZ, 3JF, WKM, NBF, PGC, 3X2, K2Y, BZK, 9VZ, MLX, GK2, WNL, 42M, VK9, 2SM, KML, DQW, D98, CQD, 3PV, LMK, Z7P, C9D, JHL, NWT, V6S, WLB, 8F8, 2VV, ZVZ, 232, DNZ, T95, GNS, Y86, X2M, DSP, 888, QH5, FR8, W5Y, DHN, ZLF, 4Y2, LGS, WQY, 3BN, PS9, S87, JGB, 8K3, 632, NDH, KJ8, BGW, L7H, DT8, J6R, HGJ, LJH, 7Y9, PMX, 5MZ, R28, JSK, Z4V, YBF, NM6, GMP, 17N, PQP, 18D, LK7, CBJ, SCY, TV5, 8CC, 2NX, S14, QDL, CJW, S45, 6XS, TMR, 9T3, N7Y, L94, XQ6, QXF, BXW, COM
+: you 181(NWT), san 141(NWT)
+: = 322
+
+ - 322 correct <2019-12-07 Sat 11:50>
+* day 7
+** puzzle
+--- Day 7: Amplification Circuit ---
+
+Based on the navigational maps, you're going to need to send more power to your ship's thrusters to reach Santa in time. To do this, you'll need to configure a series of amplifiers already installed on the ship.
+
+There are five amplifiers connected in series; each one receives an input signal and produces an output signal. They are connected such that the first amplifier's output leads to the second amplifier's input, the second amplifier's output leads to the third amplifier's input, and so on. The first amplifier's input value is 0, and the last amplifier's output leads to your ship's thrusters.
+
+    O-------O  O-------O  O-------O  O-------O  O-------O
+0 ->| Amp A |->| Amp B |->| Amp C |->| Amp D |->| Amp E |-> (to thrusters)
+    O-------O  O-------O  O-------O  O-------O  O-------O
+
+The Elves have sent you some Amplifier Controller Software (your puzzle input), a program that should run on your existing Intcode computer. Each amplifier will need to run a copy of the program.
+
+When a copy of the program starts running on an amplifier, it will first use an input instruction to ask the amplifier for its current phase setting (an integer from 0 to 4). Each phase setting is used exactly once, but the Elves can't remember which amplifier needs which phase setting.
+
+The program will then call another input instruction to get the amplifier's input signal, compute the correct output signal, and supply it back to the amplifier with an output instruction. (If the amplifier has not yet received an input signal, it waits until one arrives.)
+
+Your job is to find the largest output signal that can be sent to the thrusters by trying every possible combination of phase settings on the amplifiers. Make sure that memory is not shared or reused between copies of the program.
+
+For example, suppose you want to try the phase setting sequence 3,1,2,4,0, which would mean setting amplifier A to phase setting 3, amplifier B to setting 1, C to 2, D to 4, and E to 0. Then, you could determine the output signal that gets sent from amplifier E to the thrusters with the following steps:
+
+    Start the copy of the amplifier controller software that will run on amplifier A. At its first input instruction, provide it the amplifier's phase setting, 3. At its second input instruction, provide it the input signal, 0. After some calculations, it will use an output instruction to indicate the amplifier's output signal.
+    Start the software for amplifier B. Provide it the phase setting (1) and then whatever output signal was produced from amplifier A. It will then produce a new output signal destined for amplifier C.
+    Start the software for amplifier C, provide the phase setting (2) and the value from amplifier B, then collect its output signal.
+    Run amplifier D's software, provide the phase setting (4) and input value, and collect its output signal.
+    Run amplifier E's software, provide the phase setting (0) and input value, and collect its output signal.
+
+The final output signal from amplifier E would be sent to the thrusters. However, this phase setting sequence may not have been the best one; another sequence might have sent a higher signal to the thrusters.
+
+Here are some example programs:
+
+    Max thruster signal 43210 (from phase setting sequence 4,3,2,1,0):
+
+    3,15,3,16,1002,16,10,16,1,16,15,15,4,15,99,0,0
+
+    Max thruster signal 54321 (from phase setting sequence 0,1,2,3,4):
+
+    3,23,3,24,1002,24,10,24,1002,23,-1,23,
+    101,5,23,23,1,24,23,23,4,23,99,0,0
+
+    Max thruster signal 65210 (from phase setting sequence 1,0,4,3,2):
+
+    3,31,3,32,1002,32,10,32,1001,31,-2,31,1007,31,0,33,
+    1002,33,7,33,1,33,31,31,1,32,31,31,4,31,99,0,0,0
+
+Try every combination of phase settings on the amplifiers. What is the highest signal that can be sent to the thrusters?
+
+Your puzzle answer was 30940.
+--- Part Two ---
+
+It's no good - in this configuration, the amplifiers can't generate a large enough output signal to produce the thrust you'll need. The Elves quickly talk you through rewiring the amplifiers into a feedback loop:
+
+      O-------O  O-------O  O-------O  O-------O  O-------O
+0 -+->| Amp A |->| Amp B |->| Amp C |->| Amp D |->| Amp E |-.
+   |  O-------O  O-------O  O-------O  O-------O  O-------O |
+   |                                                        |
+   '--------------------------------------------------------+
+                                                            |
+                                                            v
+                                                     (to thrusters)
+
+Most of the amplifiers are connected as they were before; amplifier A's output is connected to amplifier B's input, and so on. However, the output from amplifier E is now connected into amplifier A's input. This creates the feedback loop: the signal will be sent through the amplifiers many times.
+
+In feedback loop mode, the amplifiers need totally different phase settings: integers from 5 to 9, again each used exactly once. These settings will cause the Amplifier Controller Software to repeatedly take input and produce output many times before halting. Provide each amplifier its phase setting at its first input instruction; all further input/output instructions are for signals.
+
+Don't restart the Amplifier Controller Software on any amplifier during this process. Each one should continue receiving and sending signals until it halts.
+
+All signals sent or received in this process will be between pairs of amplifiers except the very first signal and the very last signal. To start the process, a 0 signal is sent to amplifier A's input exactly once.
+
+Eventually, the software on the amplifiers will halt after they have processed the final loop. When this happens, the last output signal from amplifier E is sent to the thrusters. Your job is to find the largest output signal that can be sent to the thrusters using the new phase settings and feedback loop arrangement.
+
+Here are some example programs:
+
+    Max thruster signal 139629729 (from phase setting sequence 9,8,7,6,5):
+
+    3,26,1001,26,-4,26,3,27,1002,27,2,27,1,27,26,
+    27,4,27,1001,28,-1,28,1005,28,6,99,0,0,5
+
+    Max thruster signal 18216 (from phase setting sequence 9,7,8,5,6):
+
+    3,52,1001,52,-5,52,3,53,1,52,56,54,1007,54,5,55,1005,55,26,1001,54,
+    -5,54,1105,1,12,1,53,54,53,1008,54,0,55,1001,55,1,55,2,53,55,53,4,
+    53,1001,56,-1,56,1005,56,6,99,0,0,0,0,10
+
+Try every combination of the new phase settings on the amplifier feedback loop. What is the highest signal that can be sent to the thrusters?
+
+Your puzzle answer was 76211147.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2019-12-07 Sat 13:29>
+#+BEGIN_SRC C :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <stdarg.h>
+  #define MAX 100000
+
+  void die(const char *s) {
+    printf("%s\n", s);
+    exit(0);
+  }
+
+  void info(const char * format, ...) {
+    return;
+    va_list arglist;
+    va_start(arglist, format);
+    vprintf(format, arglist);
+    va_end(arglist);
+  }
+
+  int run(int program[], int inputc, int inputs[]) {
+    int p[MAX];
+    for (int i = 0; i < MAX; i++) {
+      p[i] = program[i];
+    }
+    int inputi = 0;
+    int lastoutput = -1;
+      for (int i = 0; i < 10000;) {
+        int opcode = p[i] % 100;
+        int p1mode = (p[i] / 100) % 10;
+        int p2mode = (p[i] / 1000) % 10;
+        int p3mode = (p[i] / 10000) % 10;
+        if (opcode == 99) {
+          break;
+        } else if (opcode == 1) { // +
+          info("%4d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (p3mode == 1) die("opcode 1 had p3mode");
+          p[p[i+3]] = (p1mode ? p[i+1] : p[p[i+1]]) + (p2mode ? p[i+2] : p[p[i+2]]);
+          i += 4;
+        } else if (opcode == 2) { // *
+          info("%4d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (p3mode == 1) die("opcode 2 had p3mode");
+          p[p[i+3]] = (p1mode ? p[i+1] : p[p[i+1]]) * (p2mode ? p[i+2] : p[p[i+2]]);
+          i += 4;
+        } else if (opcode == 3) { // input
+          info("%4d: %d %d\n", i, p[i], p[i+1]);
+          if (inputi >= inputc) die("inputs exausted");
+          p[p[i+1]] = inputs[inputi++];
+          i += 2;
+        } else if (opcode == 4) { // output
+          info("%4d: %d %d\n", i, p[i], p[i+1]);
+          lastoutput = p1mode ? p[i+1] : p[p[i+1]];
+          info("output %d\n", lastoutput);
+          i += 2;
+        } else if (opcode == 5) { // jump-if-true
+          info("%4d: %d %d %d\n", i, p[i], p[i+1], p[i+2]);
+          if (0 != (p1mode ? p[i+1] : p[p[i+1]]))
+            i = p2mode ? p[i+2] : p[p[i+2]];
+          else
+            i += 3;
+        } else if (opcode == 6) { // jump-if-false
+          info("%4d: %d %d %d\n", i, p[i], p[i+1], p[i+2]);
+          if (0 == (p1mode ? p[i+1] : p[p[i+1]]))
+            i = p2mode ? p[i+2] : p[p[i+2]];
+          else
+            i += 3;
+        } else if (opcode == 7) { // less than
+          info("%4d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if ((p1mode ? p[i+1] : p[p[i+1]]) < (p2mode ? p[i+2] : p[p[i+2]]))
+            p[p[i+3]] = 1;
+          else
+            p[p[i+3]] = 0;
+          i += 4;
+        } else if (opcode == 8) { // equal to
+          info("%4d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if ((p1mode ? p[i+1] : p[p[i+1]]) == (p2mode ? p[i+2] : p[p[i+2]]))
+            p[p[i+3]] = 1;
+          else
+            p[p[i+3]] = 0;
+          i += 4;
+        } else {
+          printf("Error: %d: %d\n", i, p[i]);
+          return 0;
+        }
+      }
+      return lastoutput;
+  }
+  int run2(int program[], int input1, int input2) {
+    int inputs[] = {input1, input2};
+    return run(program, 2, inputs);
+  }
+
+  int main(int argc, char **args) {
+      int positions[MAX];
+      FILE *f = fopen("07.txt", "r");
+      for (int i = 0; i < MAX; i++) {
+          if (fscanf(f, "%d", &positions[i]) != 1) break;
+          fscanf(f, ",");
+      }
+      int max = 0;
+      for (int p1 = 0; p1 < 5; p1++) {
+        int o1 = run2(positions, p1, 0);
+        for (int p2 = 0; p2 < 5; p2++) {
+          if (p2 == p1) continue;
+          int o2 = run2(positions, p2, o1);
+          for (int p3 = 0; p3 < 5; p3++) {
+            if (p3 == p2 || p3 == p1) continue;
+            int o3 = run2(positions, p3, o2);
+            for (int p4 = 0; p4 < 5; p4++) {
+              if (p4 == p3 || p4 == p2 || p4 == p1) continue;
+              int o4 = run2(positions, p4, o3);
+              for (int p5 = 0; p5 < 5; p5++) {
+              if (p5 == p4 || p5 == p3 || p5 == p2 || p5 == p1) continue;
+              int o5 = run2(positions, p5, o4);
+              if (o5 > max) max = o5;
+              if (o5 == max) info("%d  (%d %d %d %d %d)\n", max, p1, p2, p3, p4, p5);
+      }}}}}
+      printf("= %d\n", max);
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 30940
+
+ - 30940 correct <2019-12-07 Sat 13:54>
+** part 2
+#+BEGIN_SRC C :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <stdarg.h>
+  #define MAX 100000
+
+  void die(const char *s) {
+    printf("%s\n", s);
+    exit(0);
+  }
+
+  void info(const char * format, ...) {
+    return;
+    va_list arglist;
+    va_start(arglist, format);
+    vprintf(format, arglist);
+    va_end(arglist);
+  }
+
+  #define PSTATE_NOT_STARTED 0
+  #define PSTATE_STOPPED 1
+  #define PSTATE_WAITING_INPUT 2
+  #define PSTATE_OUTPUT 3
+
+  struct program {
+    int program[MAX];
+    int pc;
+    int state;
+  };
+
+  int run(struct program *program, int input) {
+    int *p = program->program;
+    int lastoutput = -1;
+    int i = program->pc;
+    int usedinput = 0;
+    while (i < MAX) {
+        int opcode = p[i] % 100;
+        int p1mode = (p[i] / 100) % 10;
+        int p2mode = (p[i] / 1000) % 10;
+        int p3mode = (p[i] / 10000) % 10;
+        if (opcode == 99) {
+          program->state = PSTATE_STOPPED;
+          program->pc = i;
+          return -1;
+        } else if (opcode == 1) { // +
+          info("%4d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (p3mode == 1) die("opcode 1 had p3mode");
+          p[p[i+3]] = (p1mode ? p[i+1] : p[p[i+1]]) + (p2mode ? p[i+2] : p[p[i+2]]);
+          i += 4;
+        } else if (opcode == 2) { // *
+          info("%4d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (p3mode == 1) die("opcode 2 had p3mode");
+          p[p[i+3]] = (p1mode ? p[i+1] : p[p[i+1]]) * (p2mode ? p[i+2] : p[p[i+2]]);
+          i += 4;
+        } else if (opcode == 3) { // input
+          info("%4d: %d %d\n", i, p[i], p[i+1]);
+          if (usedinput) {
+            program->state = PSTATE_WAITING_INPUT;
+            program->pc = i;
+            return -2;
+          }
+          p[p[i+1]] = input;
+          i += 2;
+          usedinput = 1;
+        } else if (opcode == 4) { // output
+          info("%4d: %d %d\n", i, p[i], p[i+1]);
+          lastoutput = p1mode ? p[i+1] : p[p[i+1]];
+          info("output %d\n", lastoutput);
+          i += 2;
+          program->state = PSTATE_OUTPUT;
+          program->pc = i;
+          return lastoutput;
+        } else if (opcode == 5) { // jump-if-true
+          info("%4d: %d %d %d\n", i, p[i], p[i+1], p[i+2]);
+          if (0 != (p1mode ? p[i+1] : p[p[i+1]]))
+            i = p2mode ? p[i+2] : p[p[i+2]];
+          else
+            i += 3;
+        } else if (opcode == 6) { // jump-if-false
+          info("%4d: %d %d %d\n", i, p[i], p[i+1], p[i+2]);
+          if (0 == (p1mode ? p[i+1] : p[p[i+1]]))
+            i = p2mode ? p[i+2] : p[p[i+2]];
+          else
+            i += 3;
+        } else if (opcode == 7) { // less than
+          info("%4d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if ((p1mode ? p[i+1] : p[p[i+1]]) < (p2mode ? p[i+2] : p[p[i+2]]))
+            p[p[i+3]] = 1;
+          else
+            p[p[i+3]] = 0;
+          i += 4;
+        } else if (opcode == 8) { // equal to
+          info("%4d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if ((p1mode ? p[i+1] : p[p[i+1]]) == (p2mode ? p[i+2] : p[p[i+2]]))
+            p[p[i+3]] = 1;
+          else
+            p[p[i+3]] = 0;
+          i += 4;
+        } else {
+          info("%d: %d %d %d %d\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          die("Error: unknown opcode");
+          return -2;
+        }
+      }
+      die("Error: program outside MAX\n");
+      return -3;
+  }
+
+  int main(int argc, char **args) {
+      int positions[MAX];
+      FILE *f = fopen("07.txt", "r");
+      for (int i = 0; i < MAX; i++) {
+          if (fscanf(f, "%d", &positions[i]) != 1) break;
+          fscanf(f, ",");
+      }
+
+      int max = 0;
+      for (int p1 = 5; p1 <= 9; p1++) {
+        for (int p2 = 0; p2 <= 9; p2++) {
+          if (p2 == p1) continue;
+          for (int p3 = 5; p3 <= 9; p3++) {
+            if (p3 == p2 || p3 == p1) continue;
+            for (int p4 = 5; p4 <= 9; p4++) {
+              if (p4 == p3 || p4 == p2 || p4 == p1) continue;
+              for (int p5 = 5; p5 <= 9; p5++) {
+                if (p5 == p4 || p5 == p3 || p5 == p2 || p5 == p1) continue;
+                struct program progs[6];
+                for (int j = 0; j < 6; j++) {
+                  progs[j].pc = 0;
+                  progs[j].state = PSTATE_NOT_STARTED;
+                  for (int i = 0; i < MAX; i++) 
+                    progs[j].program[i] = positions[i];
+                }
+
+                run(&progs[1], p1);
+                run(&progs[2], p2);
+                run(&progs[3], p3);
+                run(&progs[4], p4);
+                run(&progs[5], p5);
+                int output = 0;
+                int realoutput = 0;
+                while (progs[1].state != PSTATE_STOPPED) {
+                  output = run(&progs[1], output);
+                  info("## 1 out=%d, state=%d\n", output, progs[1].state);
+                  output = run(&progs[2], output);
+                  info("## 2 out=%d, state=%d\n", output, progs[2].state);
+                  output = run(&progs[3], output);
+                  info("## 3 out=%d, state=%d\n", output, progs[3].state);
+                  output = run(&progs[4], output);
+                  info("## 4 out=%d, state=%d\n", output, progs[4].state);
+                  output = run(&progs[5], output);
+                  info("## 5 out=%d, state=%d\n", output, progs[5].state);
+                  if (progs[5].state == PSTATE_OUTPUT)
+                    realoutput = output;
+                }
+                if (realoutput > max) max = realoutput;
+      }}}}}
+      printf("= %d\n", max);
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 76211147
+
+ - 75935428 too low <2019-12-07 Sat 14:42>
+ - 76211147 correct <2019-12-07 Sat 14:43>
