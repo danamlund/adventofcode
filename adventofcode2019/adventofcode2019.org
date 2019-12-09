@@ -1808,3 +1808,339 @@ int main(int argc, char **args) {
 :   #  #### #    #     ##
 
  - YLFPJ correct <2019-12-08 Sun>
+* day 9
+** puzzle
+** part 1
+ - <2019-12-09 Mon 19:26>
+#+BEGIN_SRC C :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <stdarg.h>
+  #define MAX 10000
+
+  void die(const char *format, ...) {
+    va_list arglist;
+    va_start(arglist, format);
+    vprintf(format, arglist);
+    va_end(arglist);
+    exit(0);
+  }
+
+  void info(const char * format, ...) {
+    return;
+    va_list arglist;
+    va_start(arglist, format);
+    vprintf(format, arglist);
+    va_end(arglist);
+  }
+
+  #define PSTATE_NOT_STARTED 0
+  #define PSTATE_STOPPED 1
+  #define PSTATE_WAITING_INPUT 2
+  #define PSTATE_OUTPUT 3
+
+  struct program {
+    long program[MAX];
+    int pc;
+    int state;
+    long base;
+  };
+
+  long paramref(struct program *program, int mode, int i) {
+      if (mode == 0) {
+          long val = program->program[i];
+          if (val > MAX) die("param too big: mode=%d, i=%d, val=%ld", mode, i, val);
+          return program->program[i];
+      } else if (mode == 1) {
+          return i;
+      } else if (mode == 2) {
+          long val = program->base + program->program[i];
+          if (val > MAX) die("param too big");
+          return val;
+      } else {
+          die("Invalid parameter mode");
+      }
+  }
+  long param(struct program *program, int mode, int i) {
+    long val = paramref(program, mode, i);
+    if (val > MAX) die("param too big: mode=%d, i=%d, val=%ld", mode, i, val);
+    return program->program[val];
+  }
+
+  long run(struct program *program, int input) {
+    int stopper = 10000;
+    long *p = program->program;
+    long lastoutput = -1;
+    int i = program->pc;
+    int usedinput = 0;
+    while (stopper-- >= 0) {
+       if (i > MAX-5) die("pc outside range");
+        int opcode = p[i] % 100;
+        int p1mode = (p[i] / 100) % 10;
+        int p2mode = (p[i] / 1000) % 10;
+        int p3mode = (p[i] / 10000) % 10;
+        if (opcode == 99) {
+          program->state = PSTATE_STOPPED;
+          program->pc = i;
+          return -1;
+        } else if (opcode == 1) { // +
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          p[paramref(program, p3mode, i+3)] = param(program, p1mode, i+1) + param(program, p2mode, i+2);
+          i += 4;
+        } else if (opcode == 2) { // *
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          p[paramref(program, p3mode, i+3)] = param(program, p1mode, i+1) * param(program, p2mode, i+2);
+          i += 4;
+        } else if (opcode == 3) { // input
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          if (usedinput) {
+            program->state = PSTATE_WAITING_INPUT;
+            program->pc = i;
+            return -2;
+          }
+          p[paramref(program, p1mode, i+1)] = input;
+          i += 2;
+          usedinput = 1;
+        } else if (opcode == 4) { // output
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          lastoutput = param(program, p1mode, i+1);
+          info("output %ld\n", lastoutput);
+          i += 2;
+          program->state = PSTATE_OUTPUT;
+          program->pc = i;
+          return lastoutput;
+        } else if (opcode == 5) { // jump-if-true
+          info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
+          if (0 != param(program, p1mode, i+1))
+            i = param(program, p2mode, i+2);
+          else
+            i += 3;
+        } else if (opcode == 6) { // jump-if-false
+          info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
+          if (0 == param(program, p1mode, i+1))
+            i = param(program, p2mode, i+2);
+          else
+            i += 3;
+        } else if (opcode == 7) { // less than
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (param(program, p1mode, i+1) < param(program, p2mode, i+2))
+            p[paramref(program, p3mode, i+3)] = 1;
+          else
+            p[paramref(program, p3mode, i+3)] = 0;
+          i += 4;
+        } else if (opcode == 8) { // equal to
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (param(program, p1mode, i+1) == param(program, p2mode, i+2))
+            p[paramref(program, p3mode, i+3)] = 1;
+          else
+            p[paramref(program, p3mode, i+3)] = 0;
+          i += 4;
+        } else if (opcode == 9) {
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          program->base += param(program, p1mode, i+1);
+          i += 2;
+        } else {
+          info("%ld: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          die("Error: unknown opcode %d: %ld, %ld, %ld, %ld", i, p[i], p[i+1], p[i+2], p[i+3]);
+          return -2;
+        }
+      }
+      die("Error: program outside MAX\n");
+      return -3;
+  }
+
+  int main(int argc, char **args) {
+      long positions[MAX] = {0};
+      FILE *f = fopen("09.txt", "r");
+      for (int i = 0; i < MAX; i++) {
+          if (fscanf(f, "%ld", &positions[i]) != 1) break;
+          fscanf(f, ",");
+      }
+
+      struct program prog;
+      prog.pc = 0;
+      prog.state = PSTATE_NOT_STARTED;
+      prog.base = 0;
+      for (int i = 0; i < MAX; i++)
+        prog.program[i] = positions[i];
+
+      while (prog.state != PSTATE_STOPPED) {
+        long output = run(&prog, 1);
+        if (prog.state == PSTATE_OUTPUT)
+          printf("OUTPUT %ld\n", output);
+      }
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: OUTPUT 2662308295
+
+ - 203 too low <2019-12-09 Mon 20:08>
+ - 2662308295 correct <2019-12-09 Mon 20:15>
+** part 2
+#+BEGIN_SRC C :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <stdarg.h>
+  #define MAX 100000000
+
+  void die(const char *format, ...) {
+    va_list arglist;
+    va_start(arglist, format);
+    vprintf(format, arglist);
+    va_end(arglist);
+    exit(0);
+  }
+
+  void info(const char * format, ...) {
+    return;
+    va_list arglist;
+    va_start(arglist, format);
+    vprintf(format, arglist);
+    va_end(arglist);
+  }
+
+  #define PSTATE_NOT_STARTED 0
+  #define PSTATE_STOPPED 1
+  #define PSTATE_WAITING_INPUT 2
+  #define PSTATE_OUTPUT 3
+
+  struct program {
+    long *program;
+    int pc;
+    int state;
+    long base;
+  };
+
+  long paramref(struct program *program, int mode, int i) {
+      if (mode == 0) {
+          long val = program->program[i];
+          if (val > MAX) die("param too big: mode=%d, i=%d, val=%ld", mode, i, val);
+          return program->program[i];
+      } else if (mode == 1) {
+          return i;
+      } else if (mode == 2) {
+          long val = program->base + program->program[i];
+          if (val > MAX) die("param too big");
+          return val;
+      } else {
+          die("Invalid parameter mode");
+      }
+  }
+  long param(struct program *program, int mode, int i) {
+    long val = paramref(program, mode, i);
+    if (val > MAX) die("param too big: mode=%d, i=%d, val=%ld", mode, i, val);
+    return program->program[val];
+  }
+
+  long run(struct program *program, int input) {
+    int stopper = 999999999;
+    long *p = program->program;
+    long lastoutput = -1;
+    int i = program->pc;
+    int usedinput = 0;
+    while (stopper-- >= 0) {
+       if (i > MAX-5) die("pc outside range");
+        int opcode = p[i] % 100;
+        int p1mode = (p[i] / 100) % 10;
+        int p2mode = (p[i] / 1000) % 10;
+        int p3mode = (p[i] / 10000) % 10;
+        if (opcode == 99) {
+          program->state = PSTATE_STOPPED;
+          program->pc = i;
+          return -1;
+        } else if (opcode == 1) { // +
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          p[paramref(program, p3mode, i+3)] = param(program, p1mode, i+1) + param(program, p2mode, i+2);
+          i += 4;
+        } else if (opcode == 2) { // *
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          p[paramref(program, p3mode, i+3)] = param(program, p1mode, i+1) * param(program, p2mode, i+2);
+          i += 4;
+        } else if (opcode == 3) { // input
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          if (usedinput) {
+            program->state = PSTATE_WAITING_INPUT;
+            program->pc = i;
+            return -2;
+          }
+          p[paramref(program, p1mode, i+1)] = input;
+          i += 2;
+          usedinput = 1;
+        } else if (opcode == 4) { // output
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          lastoutput = param(program, p1mode, i+1);
+          info("output %ld\n", lastoutput);
+          i += 2;
+          program->state = PSTATE_OUTPUT;
+          program->pc = i;
+          return lastoutput;
+        } else if (opcode == 5) { // jump-if-true
+          info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
+          if (0 != param(program, p1mode, i+1))
+            i = param(program, p2mode, i+2);
+          else
+            i += 3;
+        } else if (opcode == 6) { // jump-if-false
+          info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
+          if (0 == param(program, p1mode, i+1))
+            i = param(program, p2mode, i+2);
+          else
+            i += 3;
+        } else if (opcode == 7) { // less than
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (param(program, p1mode, i+1) < param(program, p2mode, i+2))
+            p[paramref(program, p3mode, i+3)] = 1;
+          else
+            p[paramref(program, p3mode, i+3)] = 0;
+          i += 4;
+        } else if (opcode == 8) { // equal to
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (param(program, p1mode, i+1) == param(program, p2mode, i+2))
+            p[paramref(program, p3mode, i+3)] = 1;
+          else
+            p[paramref(program, p3mode, i+3)] = 0;
+          i += 4;
+        } else if (opcode == 9) {
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          program->base += param(program, p1mode, i+1);
+          i += 2;
+        } else {
+          info("%ld: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          die("Error: unknown opcode %d: %ld, %ld, %ld, %ld", i, p[i], p[i+1], p[i+2], p[i+3]);
+          return -2;
+        }
+      }
+      die("Error: program outside MAX: %d\n", i);
+      return -3;
+  }
+
+  int main(int argc, char **args) {
+      long *positions = malloc(MAX * sizeof(long));
+      //long positions[MAX] = {0};
+      FILE *f = fopen("09.txt", "r");
+      for (int i = 0; i < MAX; i++) {
+          if (fscanf(f, "%ld", &positions[i]) != 1) break;
+          fscanf(f, ",");
+      }
+
+      struct program prog;
+      prog.pc = 0;
+      prog.state = PSTATE_NOT_STARTED;
+      prog.base = 0;
+      prog.program = positions;
+
+      while (prog.state != PSTATE_STOPPED) {
+        long output = run(&prog, 2);
+        if (prog.state == PSTATE_OUTPUT)
+          printf("OUTPUT %ld\n", output);
+      }
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: OUTPUT 63441
+
+ - 63441 correct <2019-12-09 Mon 20:18>
