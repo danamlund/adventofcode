@@ -1,148 +1,80 @@
   #include <stdio.h>
-  #include <stdlib.h>
-  #include <stdarg.h>
-  #define MAX 10000
-
-  void die(const char *s) {
-    printf("%s\n", s);
-    exit(0);
+  #include <math.h>
+  int gcd(int a, int b) { 
+    if (a == 0 || b == 0) return 0;
+    else if (a == b) return a;
+    else if (a > b) return gcd(a - b, b);
+    else/*if (a < b)*/return gcd(a, b - a);
   }
-
-  void info(const char * format, ...) {
-    va_list arglist;
-    va_start(arglist, format);
-    vprintf(format, arglist);
-    va_end(arglist);
+  int abs(int a) {
+    return a < 0 ? -a: a;
   }
-
-  #define PSTATE_NOT_STARTED 0
-  #define PSTATE_STOPPED 1
-  #define PSTATE_WAITING_INPUT 2
-  #define PSTATE_OUTPUT 3
-
-  struct program {
-    long program[MAX];
-    int pc;
-    int state;
-    long base;
-  };
-
-  long param(struct program *program, int mode, int i) {
-    switch (mode) {
-    case 0: return program->program[program->program[i]];
-    case 1: return program->program[i];
-    case 2: return program->program[program->base + program->program[i]];
-    default: die("Invalid parameter mode");
-    }
-    return 0;
-  }
-
-  long run(struct program *program, int input) {
-    int stopper = 10000;
-    long *p = program->program;
-    long lastoutput = -1;
-    int i = program->pc;
-    int usedinput = 0;
-    while (stopper-- >= 0) {
-       if (i > MAX-5) die("pc outside range");
-        int opcode = p[i] % 100;
-        int p1mode = (p[i] / 100) % 10;
-        long p1 = param(program, p1mode, i+1);
-        int p2mode = (p[i] / 1000) % 10;
-        long p2 = param(program, p2mode, i+2);
-        int p3mode = (p[i] / 10000) % 10;
-        long p3 = param(program, p3mode, i+3);
-        if (opcode == 99) {
-          program->state = PSTATE_STOPPED;
-          program->pc = i;
-          return -1;
-        } else if (opcode == 1) { // +
-          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
-          if (p3mode == 1) die("opcode 1 had p3mode");
-          p[p[i+3]] = p1 + p2;
-          i += 4;
-        } else if (opcode == 2) { // *
-          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
-          if (p3mode == 1) die("opcode 2 had p3mode");
-          p[p[i+3]] = p1 * p2;
-          i += 4;
-        } else if (opcode == 3) { // input
-          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
-          if (usedinput) {
-            program->state = PSTATE_WAITING_INPUT;
-            program->pc = i;
-            return -2;
-          }
-          p[p[i+1]] = input;
-          i += 2;
-          usedinput = 1;
-        } else if (opcode == 4) { // output
-          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
-          lastoutput = p1;
-          info("output %ld\n", lastoutput);
-          i += 2;
-          program->state = PSTATE_OUTPUT;
-          program->pc = i;
-          return lastoutput;
-        } else if (opcode == 5) { // jump-if-true
-          info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
-          if (0 != p1)
-            i = p2;
-          else
-            i += 3;
-        } else if (opcode == 6) { // jump-if-false
-          info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
-          if (0 == p1)
-            i = p2;
-          else
-            i += 3;
-        } else if (opcode == 7) { // less than
-          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
-          if (p1 < p2)
-            p[p[i+3]] = 1;
-          else
-            p[p[i+3]] = 0;
-          i += 4;
-        } else if (opcode == 8) { // equal to
-          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
-          if (p1 == p2)
-            p[p[i+3]] = 1;
-          else
-            p[p[i+3]] = 0;
-          i += 4;
-        } else if (opcode == 9) {
-          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
-          program->base += p1;
-          i += 2;
+  int main(int argc, char **args) {
+    int yxs[30][30] = {0};
+    FILE *f = fopen("10b.txt", "r");
+    int w, h;
+    {
+      int c, x, y;
+      x = y = w = h = 0;
+      while ((c = fgetc(f)) != EOF) {
+        if (c == '\n') {
+          y++;
+          x = 0;
         } else {
-          info("%ld: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
-          die("Error: unknown opcode");
-          return -2;
+          if (x > w) w = x;
+          if (y > h) h = y;
+          if (c == '#') yxs[y][x] = 1;
+          x++;
         }
       }
-      die("Error: program outside MAX\n");
-      return -3;
-  }
+      w++;
+      h++;
+    }
 
-  int main(int argc, char **args) {
-      long positions[MAX];
-      FILE *f = fopen("09b.txt", "r");
-      for (int i = 0; i < MAX; i++) {
-          if (fscanf(f, "%ld", &positions[i]) != 1) break;
-          fscanf(f, ",");
-      }
+    //int x = 17, y = 23; 10.txt
+    int x = 8, y = 3; // 10b.txt
 
-      struct program prog;
-      prog.pc = 0;
-      prog.state = PSTATE_NOT_STARTED;
-      prog.base = 0;
-      for (int i = 0; i < MAX; i++)
-        prog.program[i] = positions[i];
+    float radians[30][30] = {-1};
+    int detecteds[30][30] = {0};
+    int maxDetected = 0;
+    int maxx, maxy;
 
-      while (prog.state != PSTATE_STOPPED) {
-        long output = run(&prog, 0);
-        if (prog.state == PSTATE_OUTPUT)
-          printf("OUTPUT %ld\n", output);
-      }
-      return 0;
+    printf("%f\n", atan2(1.0f, 3.0f));
+
+    //printf("w=%d, h=%d\n", w, h);
+    int nth = 1;
+    for (int rotations = 0; rotations < 1; rotations++) {
+      float radian = 0.0f;
+      float minradian = 99.0f;
+      int mindist = 9999;
+      int minx, miny;
+          for (int yy = 0; yy < h; yy++) {
+            for (int xx = 0; xx < w; xx++) {
+              if (yxs[yy][xx]) {
+                float rad = atan2((float) (y - yy), (float) (xx -x));
+                if (rad < 0) rad = 2 * M_PI + rad;
+                int dist = abs(y - yy) + abs(x - xx);
+                float radianToLazer = radian - rad;
+                if (radianToLazer >= 0.0f && radianToLazer < minradian) {
+                  minradian = radianToLazer;
+                  minx = xx;
+                  miny = yy;
+                }
+                if (radianToLazer == minradian && dist < mindist) {
+                  mindist = dist;
+                  minx = xx;
+                  miny = yy;
+                }
+              }
+            }
+          }
+
+          printf("## %d: %d,%d rad=%.2f dist=%d\n", nth, minx, miny, minradian, mindist);
+          yxs[miny][minx] = 0;
+          nth++;
+          radian = minradian;
+    }
+
+    //printf("= %d\n", maxDetected);
+    return 0;
   }
