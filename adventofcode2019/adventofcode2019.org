@@ -3567,3 +3567,507 @@ Both parts of this puzzle are complete! They provide two gold stars: **
  - ! <2019-12-15 Sun 20:04>
  - 314610635824376 correct <2019-12-15 Sun 20:34>
 
+* day 13
+** puzzle
+--- Day 13: Care Package ---
+
+As you ponder the solitude of space and the ever-increasing three-hour roundtrip for messages between you and Earth, you notice that the Space Mail Indicator Light is blinking. To help keep you sane, the Elves have sent you a care package.
+
+It's a new game for the ship's arcade cabinet! Unfortunately, the arcade is all the way on the other end of the ship. Surely, it won't be hard to build your own - the care package even comes with schematics.
+
+The arcade cabinet runs Intcode software like the game the Elves sent (your puzzle input). It has a primitive screen capable of drawing square tiles on a grid. The software draws tiles to the screen with output instructions: every three output instructions specify the x position (distance from the left), y position (distance from the top), and tile id. The tile id is interpreted as follows:
+
+    0 is an empty tile. No game object appears in this tile.
+    1 is a wall tile. Walls are indestructible barriers.
+    2 is a block tile. Blocks can be broken by the ball.
+    3 is a horizontal paddle tile. The paddle is indestructible.
+    4 is a ball tile. The ball moves diagonally and bounces off objects.
+
+For example, a sequence of output values like 1,2,3,6,5,4 would draw a horizontal paddle tile (1 tile from the left and 2 tiles from the top) and a ball tile (6 tiles from the left and 5 tiles from the top).
+
+Start the game. How many block tiles are on the screen when the game exits?
+
+Your puzzle answer was 200.
+--- Part Two ---
+
+The game didn't run because you didn't put in any quarters. Unfortunately, you did not bring any quarters. Memory address 0 represents the number of quarters that have been inserted; set it to 2 to play for free.
+
+The arcade cabinet has a joystick that can move left and right. The software reads the position of the joystick with input instructions:
+
+    If the joystick is in the neutral position, provide 0.
+    If the joystick is tilted to the left, provide -1.
+    If the joystick is tilted to the right, provide 1.
+
+The arcade cabinet also has a segment display capable of showing a single number that represents the player's current score. When three output instructions specify X=-1, Y=0, the third output instruction is not a tile; the value instead specifies the new score to show in the segment display. For example, a sequence of output values like -1,0,12345 would show 12345 as the player's current score.
+
+Beat the game by breaking all the blocks. What is your score after the last block is broken?
+
+Your puzzle answer was 9803.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2019-12-17 Tue 18:17>
+#+BEGIN_SRC C :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <stdarg.h>
+  #define MAX 10000
+
+  void die(const char *format, ...) {
+    va_list arglist;
+    va_start(arglist, format);
+    vprintf(format, arglist);
+    va_end(arglist);
+    exit(0);
+  }
+
+  void info(const char * format, ...) {
+    return;
+    va_list arglist;
+    va_start(arglist, format);
+    vprintf(format, arglist);
+    va_end(arglist);
+  }
+
+  #define PSTATE_NOT_STARTED 0
+  #define PSTATE_STOPPED 1
+  #define PSTATE_WAITING_INPUT 2
+  #define PSTATE_OUTPUT 3
+
+  struct program {
+    long *program;
+    int pc;
+    int state;
+    long base;
+  };
+
+  long paramref(struct program *program, int mode, int i) {
+      if (mode == 0) {
+          long val = program->program[i];
+          if (val > MAX) die("param too big: mode=%d, i=%d, val=%ld", mode, i, val);
+          return program->program[i];
+      } else if (mode == 1) {
+          return i;
+      } else if (mode == 2) {
+          long val = program->base + program->program[i];
+          if (val > MAX) die("param too big");
+          return val;
+      } else {
+          die("Invalid parameter mode");
+      }
+  }
+  long param(struct program *program, int mode, int i) {
+    long val = paramref(program, mode, i);
+    if (val > MAX) die("param too big: mode=%d, i=%d, val=%ld", mode, i, val);
+    return program->program[val];
+  }
+
+  long run(struct program *program, int input) {
+    int stopper = 999999999;
+    long *p = program->program;
+    long lastoutput = -1;
+    int i = program->pc;
+    int usedinput = 0;
+    while (stopper-- >= 0) {
+       if (i > MAX-5) die("pc outside range");
+        int opcode = p[i] % 100;
+        int p1mode = (p[i] / 100) % 10;
+        int p2mode = (p[i] / 1000) % 10;
+        int p3mode = (p[i] / 10000) % 10;
+        if (opcode == 99) {
+          program->state = PSTATE_STOPPED;
+          program->pc = i;
+          return -1;
+        } else if (opcode == 1) { // +
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          p[paramref(program, p3mode, i+3)] = param(program, p1mode, i+1) + param(program, p2mode, i+2);
+          i += 4;
+        } else if (opcode == 2) { // *
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          p[paramref(program, p3mode, i+3)] = param(program, p1mode, i+1) * param(program, p2mode, i+2);
+          i += 4;
+        } else if (opcode == 3) { // input
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          if (usedinput) {
+            program->state = PSTATE_WAITING_INPUT;
+            program->pc = i;
+            return -2;
+          }
+          p[paramref(program, p1mode, i+1)] = input;
+          i += 2;
+          usedinput = 1;
+        } else if (opcode == 4) { // output
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          lastoutput = param(program, p1mode, i+1);
+          info("output %ld\n", lastoutput);
+          i += 2;
+          program->state = PSTATE_OUTPUT;
+          program->pc = i;
+          return lastoutput;
+        } else if (opcode == 5) { // jump-if-true
+          info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
+          if (0 != param(program, p1mode, i+1))
+            i = param(program, p2mode, i+2);
+          else
+            i += 3;
+        } else if (opcode == 6) { // jump-if-false
+          info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
+          if (0 == param(program, p1mode, i+1))
+            i = param(program, p2mode, i+2);
+          else
+            i += 3;
+        } else if (opcode == 7) { // less than
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (param(program, p1mode, i+1) < param(program, p2mode, i+2))
+            p[paramref(program, p3mode, i+3)] = 1;
+          else
+            p[paramref(program, p3mode, i+3)] = 0;
+          i += 4;
+        } else if (opcode == 8) { // equal to
+          info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          if (param(program, p1mode, i+1) == param(program, p2mode, i+2))
+            p[paramref(program, p3mode, i+3)] = 1;
+          else
+            p[paramref(program, p3mode, i+3)] = 0;
+          i += 4;
+        } else if (opcode == 9) {
+          info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+          program->base += param(program, p1mode, i+1);
+          i += 2;
+        } else {
+          info("%ld: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+          die("Error: unknown opcode %d: %ld, %ld, %ld, %ld", i, p[i], p[i+1], p[i+2], p[i+3]);
+          return -2;
+        }
+      }
+      die("Error: program outside MAX: %d\n", i);
+      return -3;
+  }
+
+  #define BUF 200
+  int main(int argc, char **args) {
+      long *positions = malloc(MAX * sizeof(long));
+      //long positions[MAX] = {0};
+      FILE *f = fopen("13.txt", "r");
+      for (int i = 0; i < MAX; i++) {
+          if (fscanf(f, "%ld", &positions[i]) != 1) break;
+          fscanf(f, ",");
+      }
+
+      struct program prog;
+      prog.pc = 0;
+      prog.state = PSTATE_NOT_STARTED;
+      prog.base = 0;
+      prog.program = positions;
+
+
+      char yxs[BUF][BUF];
+      for (int y = 0; y < BUF; y++)
+        for (int x = 0; x < BUF; x++)
+          yxs[y][x] = 5;
+
+      while (prog.state != PSTATE_STOPPED) {
+        long x = run(&prog, 0);
+        long y = run(&prog, 0);
+        long tile = run(&prog, 0);
+        if (prog.state != PSTATE_OUTPUT) break;
+
+        if (x < 0 || x >= BUF || y < 0 || y >= BUF) die("outside BUF");
+        if (tile < 0 || tile > 4) die("bad tile");
+        yxs[y][x] = (char) tile;
+      }
+
+      int minx = BUF, maxx = 0, miny = BUF, maxy = 0;
+      for (int y = 0; y < BUF; y++) {
+        for (int x = 0; x < BUF; x++) {
+          if (yxs[y][x] != 5) {
+            if (x < minx) minx = x;
+            if (x > maxx) maxx = x;
+            if (y < miny) miny = y;
+            if (y > maxy) maxy = y;
+          }
+        }
+      }
+
+      long blocks = 0;
+      char *tiles = ".WB-o.";
+      for (int y = miny; y <= maxy; y++) {
+        for (int x = minx; x <= maxx; x++) {
+          printf("%c", tiles[yxs[y][x]]);
+          if (yxs[y][x] == 2) blocks++;
+        }
+        printf("\n");
+      }
+
+      printf("= %d\n", blocks);
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW
+W..........................................W
+W..........BBB.BBBBBBB.....B.B........B..B.W
+W......BB..B..B..BB..BB....B.BB..BBBB....B.W
+W.BBB.BB....BB.B..BB.B.BB.B.B..BBB.......B.W
+W.BBB.B.BB.B.B..BBB.B.BBBBBB.B..B..B.BB....W
+W..BB.BBB.....B..BB....B.BB....B..BB..B.B..W
+W...B..B.B..B.B.BB...B....BB...BBBB.....BB.W
+W....B..B.BBBBB..B...B......B...BB.B..B....W
+W...BB..B.B..BB.B.B..BBBBB..BB...B....BB...W
+W.B.BBB.....B.B.......B.B.....BB.....BBB...W
+W.....BBBBBBB....BB..........B..B.BB....B..W
+W.B..B.BB.B.B.BB..B..BB.B.B.B....B....B.BB.W
+W..B....B..BBBB.B.BBB..B......B..BB.B.BBBB.W
+W..........................................W
+W...................o......................W
+W..........................................W
+W..........................................W
+W.....................-....................W
+W..........................................W
+= 200
+#+end_example
+
+ - 200 correct <2019-12-17 Tue 18:24>
+** part 2
+#+BEGIN_SRC C :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <stdarg.h>
+  #define MAX 10000
+
+  void die(const char *format, ...) {
+      va_list arglist;
+      va_start(arglist, format);
+      vprintf(format, arglist);
+      va_end(arglist);
+      exit(0);
+  }
+
+  void info(const char * format, ...) {
+      return;
+      va_list arglist;
+      va_start(arglist, format);
+      vprintf(format, arglist);
+      va_end(arglist);
+  }
+
+  #define PSTATE_NOT_STARTED 0
+  #define PSTATE_STOPPED 1
+  #define PSTATE_WAITING_INPUT 2
+  #define PSTATE_OUTPUT 3
+
+  struct program {
+      long *program;
+      int pc;
+      int state;
+      long base;
+  };
+
+  long paramref(struct program *program, int mode, int i) {
+      if (mode == 0) {
+          long val = program->program[i];
+          if (val > MAX) die("param too big: mode=%d, i=%d, val=%ld", mode, i, val);
+          return program->program[i];
+      } else if (mode == 1) {
+          return i;
+      } else if (mode == 2) {
+          long val = program->base + program->program[i];
+          if (val > MAX) die("param too big");
+          return val;
+      } else {
+          die("Invalid parameter mode");
+      }
+  }
+  long param(struct program *program, int mode, int i) {
+      long val = paramref(program, mode, i);
+      if (val > MAX) die("param too big: mode=%d, i=%d, val=%ld", mode, i, val);
+      return program->program[val];
+  }
+
+  long run(struct program *program, int input, int *readinput) {
+      ,*readinput = 0;
+      int stopper = 999999999;
+      long *p = program->program;
+      long lastoutput = -1;
+      int i = program->pc;
+      int usedinput = 0;
+      while (stopper-- >= 0) {
+          if (i > MAX-5) die("pc outside range");
+          int opcode = p[i] % 100;
+          int p1mode = (p[i] / 100) % 10;
+          int p2mode = (p[i] / 1000) % 10;
+          int p3mode = (p[i] / 10000) % 10;
+          if (opcode == 99) {
+              program->state = PSTATE_STOPPED;
+              program->pc = i;
+              return -1;
+          } else if (opcode == 1) { // +
+              info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+              p[paramref(program, p3mode, i+3)] = param(program, p1mode, i+1) + param(program, p2mode, i+2);
+              i += 4;
+          } else if (opcode == 2) { // *
+              info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+              p[paramref(program, p3mode, i+3)] = param(program, p1mode, i+1) * param(program, p2mode, i+2);
+              i += 4;
+          } else if (opcode == 3) { // input
+              info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+              if (usedinput) {
+                  program->state = PSTATE_WAITING_INPUT;
+                  program->pc = i;
+                  return -2;
+              }
+              ,*readinput = 1;
+              p[paramref(program, p1mode, i+1)] = input;
+              i += 2;
+              usedinput = 1;
+          } else if (opcode == 4) { // output
+              info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+              lastoutput = param(program, p1mode, i+1);
+              info("output %ld\n", lastoutput);
+              i += 2;
+              program->state = PSTATE_OUTPUT;
+              program->pc = i;
+              return lastoutput;
+          } else if (opcode == 5) { // jump-if-true
+              info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
+              if (0 != param(program, p1mode, i+1))
+                  i = param(program, p2mode, i+2);
+              else
+                  i += 3;
+          } else if (opcode == 6) { // jump-if-false
+              info("%4d: %ld %ld %ld\n", i, p[i], p[i+1], p[i+2]);
+              if (0 == param(program, p1mode, i+1))
+                  i = param(program, p2mode, i+2);
+              else
+                  i += 3;
+          } else if (opcode == 7) { // less than
+              info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+              if (param(program, p1mode, i+1) < param(program, p2mode, i+2))
+                  p[paramref(program, p3mode, i+3)] = 1;
+              else
+                  p[paramref(program, p3mode, i+3)] = 0;
+              i += 4;
+          } else if (opcode == 8) { // equal to
+              info("%4d: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+              if (param(program, p1mode, i+1) == param(program, p2mode, i+2))
+                  p[paramref(program, p3mode, i+3)] = 1;
+              else
+                  p[paramref(program, p3mode, i+3)] = 0;
+              i += 4;
+          } else if (opcode == 9) {
+              info("%4d: %ld %ld\n", i, p[i], p[i+1]);
+              program->base += param(program, p1mode, i+1);
+              i += 2;
+          } else {
+              info("%ld: %ld %ld %ld %ld\n", i, p[i], p[i+1], p[i+2], p[i+3]);
+              die("Error: unknown opcode %d: %ld, %ld, %ld, %ld", i, p[i], p[i+1], p[i+2], p[i+3]);
+              return -2;
+          }
+      }
+      die("Error: program outside MAX: %d\n", i);
+      return -3;
+  }
+
+  #define BUF 200
+  int main(int argc, char **args) {
+      long *positions = malloc(MAX * sizeof(long));
+      //long positions[MAX] = {0};
+      FILE *f = fopen("13.txt", "r");
+      for (int i = 0; i < MAX; i++) {
+          if (fscanf(f, "%ld", &positions[i]) != 1) break;
+          fscanf(f, ",");
+      }
+
+      struct program prog;
+      prog.pc = 0;
+      prog.state = PSTATE_NOT_STARTED;
+      prog.base = 0;
+      prog.program = positions;
+      prog.program[0] = 2;
+
+      struct program prog2;
+      prog2.program = positions;
+      prog2.program[0] = 2;
+
+      char yxs[BUF][BUF];
+      for (int y = 0; y < BUF; y++)
+          for (int x = 0; x < BUF; x++)
+              yxs[y][x] = 5;
+
+      int paddlex = -1;
+      int move = 0;
+      long score = -1;
+      int ballx = -1, bally = -1;
+      for (int step = 0; step < 10000; step++) {
+        /* printf("## step %d\n", step); */
+          while (prog.state != PSTATE_STOPPED) {
+              int readinput = 0;
+
+              move = ballx < paddlex ? -1 : (ballx > paddlex ? 1 : 0);
+              long x = run(&prog, move, &readinput);
+              if (readinput) paddlex += move;
+              move = ballx < paddlex ? -1 : (ballx > paddlex ? 1 : 0);
+              long y = run(&prog, move, &readinput);
+              if (readinput) paddlex += move;
+              move = ballx < paddlex ? -1 : (ballx > paddlex ? 1 : 0);
+              long tile = run(&prog, move, &readinput);
+              if (readinput) paddlex += move;
+              move = ballx < paddlex ? -1 : (ballx > paddlex ? 1 : 0);
+              if (prog.state != PSTATE_OUTPUT) break;
+
+              if (x == -1 && y == 0) {
+                  score = tile;
+                  break;
+              } else {
+                  if (x < 0 || x >= BUF || y < 0 || y >= BUF) die("outside BUF");
+                  if (tile < 0 || tile > 4) die("bad tile");
+                  yxs[y][x] = (char) tile;
+                  if (tile == 4) { ballx = x; bally = y; }
+                  if (tile == 3) { paddlex = x; }
+              }
+              if (step >= 1 && tile == 4) break;
+          }
+
+          int minx = BUF, maxx = 0, miny = BUF, maxy = 0;
+          for (int y = 0; y < BUF; y++) {
+              for (int x = 0; x < BUF; x++) {
+                  if (yxs[y][x] != 5) {
+                      if (x < minx) minx = x;
+                      if (x > maxx) maxx = x;
+                      if (y < miny) miny = y;
+                      if (y > maxy) maxy = y;
+                  }
+              }
+          }
+
+          /* printf("paddle = %d, ball = %d,%d\n", paddlex, ballx, bally); */
+
+          long blocks = 0;
+          char *tiles = ".WB-o.";
+          /* printf("score: %ld\n", score); */
+          for (int y = miny; y <= maxy; y++) {
+              for (int x = minx; x <= maxx; x++) {
+                  /* printf("%c", tiles[yxs[y][x]]); */
+                  if (yxs[y][x] == 2) blocks++;
+              }
+              /* printf("\n"); */
+          }
+          if (blocks == 0) {
+            printf("WON score=%d\n", score);
+            break;
+          }
+          if (bally == maxy) {
+            printf("game over\n");
+            break;
+          }
+      }
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: WON score=9803
+
+ - correct 9803 <2019-12-17 Tue 19:03>
