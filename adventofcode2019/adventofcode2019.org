@@ -5240,3 +5240,326 @@ Both parts of this puzzle are complete! They provide two gold stars: **
 
  - 381 too low <2019-12-19 Thu 20:11>
  - 382 correct <2019-12-19 Thu 20:14>
+* day 16
+** puzzle
+--- Day 16: Flawed Frequency Transmission ---
+
+You're 3/4ths of the way through the gas giants. Not only do roundtrip signals to Earth take five hours, but the signal quality is quite bad as well. You can clean up the signal with the Flawed Frequency Transmission algorithm, or FFT.
+
+As input, FFT takes a list of numbers. In the signal you received (your puzzle input), each number is a single digit: data like 15243 represents the sequence 1, 5, 2, 4, 3.
+
+FFT operates in repeated phases. In each phase, a new list is constructed with the same length as the input list. This new list is also used as the input for the next phase.
+
+Each element in the new list is built by multiplying every value in the input list by a value in a repeating pattern and then adding up the results. So, if the input list were 9, 8, 7, 6, 5 and the pattern for a given element were 1, 2, 3, the result would be 9*1 + 8*2 + 7*3 + 6*1 + 5*2 (with each input element on the left and each value in the repeating pattern on the right of each multiplication). Then, only the ones digit is kept: 38 becomes 8, -17 becomes 7, and so on.
+
+While each element in the output array uses all of the same input array elements, the actual repeating pattern to use depends on which output element is being calculated. The base pattern is 0, 1, 0, -1. Then, repeat each value in the pattern a number of times equal to the position in the output list being considered. Repeat once for the first element, twice for the second element, three times for the third element, and so on. So, if the third element of the output list is being calculated, repeating the values would produce: 0, 0, 0, 1, 1, 1, 0, 0, 0, -1, -1, -1.
+
+When applying the pattern, skip the very first value exactly once. (In other words, offset the whole pattern left by one.) So, for the second element of the output list, the actual pattern used would be: 0, 1, 1, 0, 0, -1, -1, 0, 0, 1, 1, 0, 0, -1, -1, ....
+
+After using this process to calculate each element of the output list, the phase is complete, and the output list of this phase is used as the new input list for the next phase, if any.
+
+Given the input signal 12345678, below are four phases of FFT. Within each phase, each output digit is calculated on a single line with the result at the far right; each multiplication operation shows the input digit on the left and the pattern value on the right:
+
+Input signal: 12345678
+
+1*1  + 2*0  + 3*-1 + 4*0  + 5*1  + 6*0  + 7*-1 + 8*0  = 4
+1*0  + 2*1  + 3*1  + 4*0  + 5*0  + 6*-1 + 7*-1 + 8*0  = 8
+1*0  + 2*0  + 3*1  + 4*1  + 5*1  + 6*0  + 7*0  + 8*0  = 2
+1*0  + 2*0  + 3*0  + 4*1  + 5*1  + 6*1  + 7*1  + 8*0  = 2
+1*0  + 2*0  + 3*0  + 4*0  + 5*1  + 6*1  + 7*1  + 8*1  = 6
+1*0  + 2*0  + 3*0  + 4*0  + 5*0  + 6*1  + 7*1  + 8*1  = 1
+1*0  + 2*0  + 3*0  + 4*0  + 5*0  + 6*0  + 7*1  + 8*1  = 5
+1*0  + 2*0  + 3*0  + 4*0  + 5*0  + 6*0  + 7*0  + 8*1  = 8
+
+After 1 phase: 48226158
+
+4*1  + 8*0  + 2*-1 + 2*0  + 6*1  + 1*0  + 5*-1 + 8*0  = 3
+4*0  + 8*1  + 2*1  + 2*0  + 6*0  + 1*-1 + 5*-1 + 8*0  = 4
+4*0  + 8*0  + 2*1  + 2*1  + 6*1  + 1*0  + 5*0  + 8*0  = 0
+4*0  + 8*0  + 2*0  + 2*1  + 6*1  + 1*1  + 5*1  + 8*0  = 4
+4*0  + 8*0  + 2*0  + 2*0  + 6*1  + 1*1  + 5*1  + 8*1  = 0
+4*0  + 8*0  + 2*0  + 2*0  + 6*0  + 1*1  + 5*1  + 8*1  = 4
+4*0  + 8*0  + 2*0  + 2*0  + 6*0  + 1*0  + 5*1  + 8*1  = 3
+4*0  + 8*0  + 2*0  + 2*0  + 6*0  + 1*0  + 5*0  + 8*1  = 8
+
+After 2 phases: 34040438
+
+3*1  + 4*0  + 0*-1 + 4*0  + 0*1  + 4*0  + 3*-1 + 8*0  = 0
+3*0  + 4*1  + 0*1  + 4*0  + 0*0  + 4*-1 + 3*-1 + 8*0  = 3
+3*0  + 4*0  + 0*1  + 4*1  + 0*1  + 4*0  + 3*0  + 8*0  = 4
+3*0  + 4*0  + 0*0  + 4*1  + 0*1  + 4*1  + 3*1  + 8*0  = 1
+3*0  + 4*0  + 0*0  + 4*0  + 0*1  + 4*1  + 3*1  + 8*1  = 5
+3*0  + 4*0  + 0*0  + 4*0  + 0*0  + 4*1  + 3*1  + 8*1  = 5
+3*0  + 4*0  + 0*0  + 4*0  + 0*0  + 4*0  + 3*1  + 8*1  = 1
+3*0  + 4*0  + 0*0  + 4*0  + 0*0  + 4*0  + 3*0  + 8*1  = 8
+
+After 3 phases: 03415518
+
+0*1  + 3*0  + 4*-1 + 1*0  + 5*1  + 5*0  + 1*-1 + 8*0  = 0
+0*0  + 3*1  + 4*1  + 1*0  + 5*0  + 5*-1 + 1*-1 + 8*0  = 1
+0*0  + 3*0  + 4*1  + 1*1  + 5*1  + 5*0  + 1*0  + 8*0  = 0
+0*0  + 3*0  + 4*0  + 1*1  + 5*1  + 5*1  + 1*1  + 8*0  = 2
+0*0  + 3*0  + 4*0  + 1*0  + 5*1  + 5*1  + 1*1  + 8*1  = 9
+0*0  + 3*0  + 4*0  + 1*0  + 5*0  + 5*1  + 1*1  + 8*1  = 4
+0*0  + 3*0  + 4*0  + 1*0  + 5*0  + 5*0  + 1*1  + 8*1  = 9
+0*0  + 3*0  + 4*0  + 1*0  + 5*0  + 5*0  + 1*0  + 8*1  = 8
+
+After 4 phases: 01029498
+
+Here are the first eight digits of the final output list after 100 phases for some larger inputs:
+
+    80871224585914546619083218645595 becomes 24176176.
+    19617804207202209144916044189917 becomes 73745418.
+    69317163492948606335995924319873 becomes 52432133.
+
+After 100 phases of FFT, what are the first eight digits in the final output list?
+
+Your puzzle answer was 29795507.
+--- Part Two ---
+
+Now that your FFT is working, you can decode the real signal.
+
+The real signal is your puzzle input repeated 10000 times. Treat this new signal as a single input list. Patterns are still calculated as before, and 100 phases of FFT are still applied.
+
+The first seven digits of your initial input signal also represent the message offset. The message offset is the location of the eight-digit message in the final output list. Specifically, the message offset indicates the number of digits to skip before reading the eight-digit message. For example, if the first seven digits of your initial input signal were 1234567, the eight-digit message would be the eight digits after skipping 1,234,567 digits of the final output list. Or, if the message offset were 7 and your final output list were 98765432109876543210, the eight-digit message would be 21098765. (Of course, your real message offset will be a seven-digit number, not a one-digit number like 7.)
+
+Here is the eight-digit message in the final output list after 100 phases. The message offset given in each input has been highlighted. (Note that the inputs given below are repeated 10000 times to find the actual starting input lists.)
+
+    03036732577212944063491565474664 becomes 84462026.
+    02935109699940807407585447034323 becomes 78725270.
+    03081770884921959731165446850517 becomes 53553731.
+
+After repeating your input signal 10000 times and running 100 phases of FFT, what is the eight-digit message embedded in the final output list?
+
+Your puzzle answer was 89568529.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2019-12-21 Sat 07:16>
+#+BEGIN_SRC C :results output
+  #include <stdio.h>
+  long abs(long val) {
+    return val < 0 ? -val : val;
+  }
+  int main(int argc, char **args) {
+    FILE *f = fopen("16.txt", "r");
+
+    int list[1000] = {1, 2, 3, 4, 5, 6, 7, 8};
+    int listc = 8;
+    listc = 0;
+    for (int b = fgetc(f); b >= '0' && b <= '9'; b = fgetc(f)) {
+      list[listc++] = b - '0';
+    }
+
+    for (int step = 0; step < 100; step++) {
+      /* printf("step %3d: ", step); */
+      /* for (int i = 0; i < listc; i++) */
+      /*   printf("%d", list[i]); */
+      /* printf("\n"); */
+
+      // 1: 0, 1, 0, -1
+      // 2: 0, 0, 1, 1, 0, 0, -1, -1
+      // 3: 0, 0, 0, 1, 1, 1, 0, 0, 0, -1, -1, -1
+      int list2[1000];
+      for (int i = 0; i < listc; i++) {
+        long val = 0;
+        for (int j = 0; j < listc; j++) {
+          int pat = j+1;
+          pat = pat % (4*(i+1));
+          if (pat < i+1);
+          else if (pat < 2*(i+1))
+            val += list[j];
+          else if (pat < 3*(i+1));
+          else if (pat < 4*(i+1))
+            val -= list[j];
+          //printf("## i=%2d, j=%2d, pat=%2d, val=%ld\n", i, j, pat, val);
+        }
+        list2[i] = abs(val) % 10;
+      }
+
+      for (int i = 0; i < listc; i++)
+        list[i] = list2[i];
+    }
+
+    printf("= ");
+    for (int i = 0; i < 8; i++)
+      printf("%d", list[i]);
+    printf("\n");
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 29795507
+
+ - 29795507 correct <2019-12-21 Sat 07:46>
+** part 2
+#+BEGIN_SRC C :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #define BUF 10000000
+  #define DUP 10000
+  /* long abs(long val) { */
+  /*   return val < 0 ? -val : val; */
+  /* } */
+  int main(int argc, char **args) {
+    FILE *f = fopen("16.txt", "r");
+
+    char *list = malloc(BUF);
+    int listc = 0;
+    for (int b = fgetc(f); b >= '0' && b <= '9'; b = fgetc(f)) {
+      list[listc++] = b - '0';
+    }
+    int listc1 = listc;
+    for (int i = 0; i < DUP; i++) {
+      for (int j = 0; j < listc; j++) {
+        list[i * listc + j] = list[j];
+      }
+    }
+    listc = DUP * listc;
+
+    char indexs[9];
+    for (int i = 0; i < 7; i++)
+      indexs[i] = '0'+list[i];
+    indexs[7] = 0;
+    int index = atoi(indexs);
+
+    long *sum = malloc(sizeof(long) * (BUF+1));
+
+    char *list2 = malloc(BUF);
+    for (int step = 0; step <= 100; step++) {
+      sum[0] = 0;
+      for (int i = 0; i < listc; i++) sum[i+1] = sum[i] + list[i];
+      //printf("... %d\n", step);
+      if (step >= 1) {
+      for (int i = 0; i < listc; i++) {
+      //for (int i = 800; i < 805; i++) {
+      //{ int i = 801;
+        long val = 0;
+
+        //printf("#0 %2d: patc=%d, listc1=%d\n", i, patc, listc1);
+        if (1) {
+          int patc = 4*(i+1);
+          for (int j = 0; j < listc; j += patc) {
+            int ones1start = j + 1*(i+1) - 1;
+            int ones1end = j + 2*(i+1) - 1;
+            if (ones1end >= listc) ones1end = listc;
+            if (ones1start < ones1end)
+              val += sum[ones1end] - sum[ones1start];
+
+            int ones2start = j + 3*(i+1) - 1;
+            int ones2end = j + 4*(i+1) - 1;
+            if (ones2end >= listc) ones2end = listc;
+            if (ones2start < ones2end)
+              val -= sum[ones2end] - sum[ones2start];
+            /* printf("#8 i=%d, j=%d, listc=%d, +=%d..%d=%ld, -=%d..%d=%d, val=%d\n", i, j, listc, ones1start, ones1end, sum[ones1end] - sum[ones1start], ones2start, ones2end, sum[ones2end] - sum[ones2start], val); */
+            /* printf("  +: %d - %d  -: %d - %d\n", sum[ones1end], sum[ones1start], sum[ones2end], sum[ones2start]); */
+          }
+        /* } else if (5*(i+1) - 1 >= listc) { */
+        /*   int ones1start = 1*(i+1) - 1; */
+        /*   int ones1end = 2*(i+1) - 2; */
+        /*   if (ones1end >= listc) ones1end = listc; */
+        /*   if (ones1start < listc) */
+        /*     val += sum[ones1end] - sum[ones1start-1]; */
+
+        /*   int ones2start = 3*(i+1) - 1; */
+        /*   int ones2end = 4*(i+1) - 2; */
+        /*   if (ones2end >= listc) ones2end = listc; */
+        /*   if (ones2start < listc) */
+        /*     val -= sum[ones2end] - sum[ones2start-1]; */
+
+          //printf("#8 i=%d, listc=%d, +=%d..%d=%ld, -=%d..%d=%d, val=%d\n", i, listc, ones1start, ones1end, sum[ones1end] - sum[ones1start], ones2start, ones2end, sum[ones2end] - sum[ones2start], val);
+          //printf("  +: %d - %d  -: %d - %d\n", sum[ones1end], sum[ones1start], sum[ones2end], sum[ones2start]);
+        /* } else { */
+        /* if (i >= listc1) { */
+        /*   int ones1start = 1*(i+1) - 1; */
+        /*   int ones1end = 2*(i+1) - 1; */
+        /*   int ones2start = 3*(i+1) - 1; */
+        /*   int ones2end = 4*(i+1) - 1; */
+
+        /*   int jmodval = 0; */
+        /*   for (int j = ones1start; j < ones1end; j++) { */
+        /*     val += list[j]; */
+        /*     if (j > ones1start && (ones1start % listc1) == (j % listc1)) { */
+        /*       int loops = (ones1end - ones1start) / listc1; */
+        /*       val += jmodval * loops; */
+        /*       printf("#6 start=%d, end=%d, loops=%d, len=%d, listc1=%d, val=%d\n",  */
+        /*       ones1start, j, loops, ones1end - ones1start, listc1, jmodval); */
+        /*       j += loops * listc1; */
+        /*     } */
+        /*     jmodval += list[j]; */
+        /*     printf("#1 i=%2d, j=%2d, +1, listc1=%d, in=%d, val=%ld\n", i, j, j % listc1, list[j], val); */
+        /*   } */
+        /*   jmodval = 0; */
+        /*   for (int j = ones2start; j < ones2end; j++) { */
+        /*     val -= list[j]; */
+        /*     if (j > ones2start && ones2start % listc1 == j % listc1) { */
+        /*       int loops = (ones2end - ones2start) / listc1; */
+        /*       val -= jmodval * loops; */
+        /*       printf("#7 start=%d, end=%d, loops=%d, val=%d\n", ones2start, j, loops, jmodval); */
+        /*       j += loops * listc1; */
+        /*     } */
+        /*     jmodval += list[j]; */
+        /*     printf("#1 i=%2d, j=%2d, -1, listc1=%d, in=%d, val=%ld\n", i, j, j % listc1, list[j], val); */
+        /*   } */
+        /* } else { */
+        /*   int firstPat = -1; */
+        /*   int firstJc1 = -1; */
+        /*   for (int j = 0; j < listc; j++) { */
+        /*     int pat = j+1; */
+        /*     pat = pat % (4*(i+1)); */
+
+        /*     if (firstPat == -1) { */
+        /*       firstPat = pat; */
+        /*       firstJc1 = j % listc1; */
+        /*     } else if (firstPat == pat && firstJc1 == (j % listc1)) { */
+        /*       int jloops = listc / j; */
+        /*       val *= jloops; */
+        /*       //printf("#3 jloops=%d, left=%d, val=%ld\n", jloops, listc - j * jloops, val); */
+        /*       j = j * jloops; */
+        /*     } */
+
+        /*     int a = 0; */
+        /*     if (pat < i+1); */
+        /*     else if (pat < 2*(i+1)) { */
+        /*       val += list[j]; a = 1; */
+        /*     } */
+        /*     else if (pat < 3*(i+1)) a = 2; */
+        /*     else if (pat < 4*(i+1)) { */
+        /*       val -= list[j]; a = 3; */
+        /*     } */
+        /*     //printf("#1 i=%2d, j=%2d, pat=%2d, listc1=%d, in=%d, val=%ld, pat=%d, a=%d, sum=%ld\n", i, j, pat, j % listc1, list[j], val, pat / (i+1), a, sum[j]); */
+        /*   } */
+        }
+        list2[i] = labs(val) % 10;
+        //printf("#4 i=%2d, val=%ld, newval=%d\n", i, val, list2[i]);
+      }
+
+      for (int i = 0; i < listc; i++)
+        list[i] = list2[i];
+      }
+
+      /* printf("%2d ", step); */
+      /* for (int i = 0; i < 30; i++) { */
+      /*   if (i % listc1 == 0) printf(" "); */
+      /*   printf("%d", list[i]); */
+      /* } */
+      /* printf("\n"); */
+    }
+
+
+    if (index >= listc) { printf("index %d too big %d\n", index, listc); return 0; }
+    for (int i = 0; i < 8; i++)
+      indexs[i] = '0'+list[i + index];
+    indexs[8] = 0;
+    int msg = atoi(indexs);
+
+    printf("= %d (%d)\n", msg, index);
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 89568529 (5973181)
+
+ - 89568529 correct <2019-12-21 Sat 18:16>
