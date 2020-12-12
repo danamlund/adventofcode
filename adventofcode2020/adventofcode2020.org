@@ -1145,3 +1145,406 @@ free: 1021
 free: 1022
 #+end_example
 
+* day 6
+** puzzle
+--- Day 6: Custom Customs ---
+
+As your flight approaches the regional airport where you'll switch to a much larger plane, customs declaration forms are distributed to the passengers.
+
+The form asks a series of 26 yes-or-no questions marked a through z. All you need to do is identify the questions for which anyone in your group answers "yes". Since your group is just you, this doesn't take very long.
+
+However, the person sitting next to you seems to be experiencing a language barrier and asks if you can help. For each of the people in their group, you write down the questions for which they answer "yes", one per line. For example:
+
+abcx
+abcy
+abcz
+
+In this group, there are 6 questions to which anyone answered "yes": a, b, c, x, y, and z. (Duplicate answers to the same question don't count extra; each question counts at most once.)
+
+Another group asks for your help, then another, and eventually you've collected answers from every group on the plane (your puzzle input). Each group's answers are separated by a blank line, and within each group, each person's answers are on a single line. For example:
+
+abc
+
+a
+b
+c
+
+ab
+ac
+
+a
+a
+a
+a
+
+b
+
+This list represents answers from five groups:
+
+    The first group contains one person who answered "yes" to 3 questions: a, b, and c.
+    The second group contains three people; combined, they answered "yes" to 3 questions: a, b, and c.
+    The third group contains two people; combined, they answered "yes" to 3 questions: a, b, and c.
+    The fourth group contains four people; combined, they answered "yes" to only 1 question, a.
+    The last group contains one person who answered "yes" to only 1 question, b.
+
+In this example, the sum of these counts is 3 + 3 + 3 + 1 + 1 = 11.
+
+For each group, count the number of questions to which anyone answered "yes". What is the sum of those counts?
+
+Your puzzle answer was 6249.
+--- Part Two ---
+
+As you finish the last group's customs declaration, you notice that you misread one word in the instructions:
+
+You don't need to identify the questions to which anyone answered "yes"; you need to identify the questions to which everyone answered "yes"!
+
+Using the same example as above:
+
+abc
+
+a
+b
+c
+
+ab
+ac
+
+a
+a
+a
+a
+
+b
+
+This list represents answers from five groups:
+
+    In the first group, everyone (all 1 person) answered "yes" to 3 questions: a, b, and c.
+    In the second group, there is no question to which everyone answered "yes".
+    In the third group, everyone answered yes to only 1 question, a. Since some people did not answer "yes" to b or c, they don't count.
+    In the fourth group, everyone answered yes to only 1 question, a.
+    In the fifth group, everyone (all 1 person) answered "yes" to 1 question, b.
+
+In this example, the sum of these counts is 3 + 0 + 1 + 1 + 1 = 6.
+
+For each group, count the number of questions to which everyone answered "yes". What is the sum of those counts?
+
+Your puzzle answer was 3103.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2020-12-12 Sat 14:14>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+int main() {
+  FILE *f = fopen("06.txt", "r");
+  int sum;
+  int yess[300] = {0};
+  int prevc = 0;
+  while (true) {
+    int c = fgetc(f);
+    
+    if (c >= 'a' && c <= 'z') {
+      yess[c]++;
+    }
+    if (c == EOF || (c == '\n' && prevc == '\n')) {
+      int groupyess = 0;
+      for (int i = 0; i < 300; i++) {
+        if (yess[i]) groupyess++;
+        yess[i] = 0;
+      }
+      sum += groupyess;
+    }
+    if (c == EOF) break;
+    prevc = c;
+  }
+
+  printf("= %d\n", sum);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 6249
+
+
+ - <2020-12-12 Sat 14:21>
+** part 2
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+int main() {
+  FILE *f = fopen("06.txt", "r");
+  int sum;
+  int yess[300] = {0};
+  int groupsize = 0;
+  int prevc = 0;
+  while (true) {
+    int c = fgetc(f);
+    
+    if (c >= 'a' && c <= 'z') {
+      yess[c]++;
+    }
+    if (c == '\n') groupsize++;
+    if (c == EOF || (c == '\n' && prevc == '\n')) {
+      groupsize--;
+      int groupyess = 0;
+      for (int i = 0; i < 300; i++) {
+        if (yess[i] == groupsize) groupyess++;
+        yess[i] = 0;
+      }
+      sum += groupyess;
+      //printf("## %d/%d sum=%d\n", groupyess, groupsize, sum);
+      groupsize = 0;
+    }
+    if (c == EOF) break;
+    prevc = c;
+  }
+
+  printf("= %d\n", sum);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 3103
+
+
+ - 1222 too low <2020-12-12 Sat 14:24>
+ - 3093 too low <2020-12-12 Sat 14:25>
+ - 3103 correct (add newline at end of input) <2020-12-12 Sat 14:27>
+* day 7
+** puzzle
+--- Day 7: Handy Haversacks ---
+
+You land at the regional airport in time for your next flight. In fact, it looks like you'll even have time to grab some food: all flights are currently delayed due to issues in luggage processing.
+
+Due to recent aviation regulations, many rules (your puzzle input) are being enforced about bags and their contents; bags must be color-coded and must contain specific quantities of other color-coded bags. Apparently, nobody responsible for these regulations considered how long they would take to enforce!
+
+For example, consider the following rules:
+
+light red bags contain 1 bright white bag, 2 muted yellow bags.
+dark orange bags contain 3 bright white bags, 4 muted yellow bags.
+bright white bags contain 1 shiny gold bag.
+muted yellow bags contain 2 shiny gold bags, 9 faded blue bags.
+shiny gold bags contain 1 dark olive bag, 2 vibrant plum bags.
+dark olive bags contain 3 faded blue bags, 4 dotted black bags.
+vibrant plum bags contain 5 faded blue bags, 6 dotted black bags.
+faded blue bags contain no other bags.
+dotted black bags contain no other bags.
+
+These rules specify the required contents for 9 bag types. In this example, every faded blue bag is empty, every vibrant plum bag contains 11 bags (5 faded blue and 6 dotted black), and so on.
+
+You have a shiny gold bag. If you wanted to carry it in at least one other bag, how many different bag colors would be valid for the outermost bag? (In other words: how many colors can, eventually, contain at least one shiny gold bag?)
+
+In the above rules, the following options would be available to you:
+
+    A bright white bag, which can hold your shiny gold bag directly.
+    A muted yellow bag, which can hold your shiny gold bag directly, plus some other bags.
+    A dark orange bag, which can hold bright white and muted yellow bags, either of which could then hold your shiny gold bag.
+    A light red bag, which can hold bright white and muted yellow bags, either of which could then hold your shiny gold bag.
+
+So, in this example, the number of bag colors that can eventually contain at least one shiny gold bag is 4.
+
+How many bag colors can eventually contain at least one shiny gold bag? (The list of rules is quite long; make sure you get all of it.)
+
+Your puzzle answer was 233.
+--- Part Two ---
+
+It's getting pretty expensive to fly these days - not because of ticket prices, but because of the ridiculous number of bags you need to buy!
+
+Consider again your shiny gold bag and the rules from the above example:
+
+    faded blue bags contain 0 other bags.
+    dotted black bags contain 0 other bags.
+    vibrant plum bags contain 11 other bags: 5 faded blue bags and 6 dotted black bags.
+    dark olive bags contain 7 other bags: 3 faded blue bags and 4 dotted black bags.
+
+So, a single shiny gold bag must contain 1 dark olive bag (and the 7 bags within it) plus 2 vibrant plum bags (and the 11 bags within each of those): 1 + 1*7 + 2 + 2*11 = 32 bags!
+
+Of course, the actual rules have a small chance of going several levels deeper than this example; be sure to count all of the bags, even if the nesting becomes topologically impractical!
+
+Here's another example:
+
+shiny gold bags contain 2 dark red bags.
+dark red bags contain 2 dark orange bags.
+dark orange bags contain 2 dark yellow bags.
+dark yellow bags contain 2 dark green bags.
+dark green bags contain 2 dark blue bags.
+dark blue bags contain 2 dark violet bags.
+dark violet bags contain no other bags.
+
+In this example, a single shiny gold bag must contain 126 other bags.
+
+How many individual bags are required inside your single shiny gold bag?
+
+Your puzzle answer was 421550.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2020-12-12 Sat 14:27>
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <string.h>
+  #include <strings.h>
+  int main() {
+    FILE *f = fopen("07.txt", "r");
+    int output = 0;
+
+    char *bagandcontainsbags[1000][10];
+    int bagi = 0;
+    char line[1000];
+    while (fgets(line, sizeof(line), f)) {
+      char *ptr = strstr(line, " contain ");
+      ptr[0] = 0;
+      int bagi2 = 0;
+      bagandcontainsbags[bagi][bagi2++] = strdup(line);
+      ptr += strlen(" contain 6 ");
+      while (true) {
+        char *ptr2 = strstr(ptr, ", ");
+        if (ptr2 == NULL) {
+          ptr2 = strstr(ptr, ".");
+          ptr2[0] = 0;
+          bagandcontainsbags[bagi][bagi2++] = strdup(ptr);
+          break;
+        } else {
+          ptr2[0] = 0;
+          bagandcontainsbags[bagi][bagi2++] = strdup(ptr);
+          ptr = ptr2 + strlen(", 5 ");
+        }
+      }
+      bagandcontainsbags[bagi][bagi2++] = NULL;
+      bagi++;
+    }
+    bagandcontainsbags[bagi][0] = NULL;
+
+    // remove bag or bags suffix
+    for (int bagi = 0; bagandcontainsbags[bagi][0]; bagi++) {
+      for (int bagi2 = 0; bagandcontainsbags[bagi][bagi2]; bagi2++) {
+        rindex(bagandcontainsbags[bagi][bagi2], ' ')[0] = 0;
+      }
+    }
+
+    char *bagscontains[10000];
+    int bagscontainsi = 0;
+    bagscontains[bagscontainsi++] = "shiny gold";
+
+    int bagscontainsiold = 0;
+    while (bagscontainsiold != bagscontainsi) {
+    bagscontainsiold = bagscontainsi;
+
+    // for (int i = 0; i < bagscontainsiold; i++)
+    //   printf("'%s', ", bagscontains[i]);
+    // printf("\n");
+
+    for (int bagi = 0; bagandcontainsbags[bagi][0]; bagi++) {
+      for (int bagi2 = 1; bagandcontainsbags[bagi][bagi2]; bagi2++) {
+        for (int i = 0; i < bagscontainsiold; i++) {
+          if (0 == strcmp(bagscontains[i], bagandcontainsbags[bagi][bagi2])) {
+            int alreadyadded = 0;
+            for (int j = 0; j < bagscontainsi; j++) {
+              if (0 == strcmp(bagandcontainsbags[bagi][0], bagscontains[j])) {
+                alreadyadded = 1;
+                break;
+              }
+            }
+            if (!alreadyadded) {
+              bagscontains[bagscontainsi++] = bagandcontainsbags[bagi][0];
+            }
+          }
+        }
+      }
+    }
+    }
+
+    printf("= %d\n", bagscontainsi - 1);
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 233
+
+
+ - 106 too low <2020-12-12 Sat 15:10>
+ - 233 correct <2020-12-12 Sat 15:14>
+** part 2
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <string.h>
+  #include <strings.h>
+
+  int bagsamount(char *bag, char *bagandcontainsbags[1000][10], int bagandcontainsbagsamount[1000][10]) {
+    int output = 1;
+    for (int bagi = 0; bagandcontainsbags[bagi][0]; bagi++) {
+      //printf("### '%s' == '%s' = %d\n", bagandcontainsbags[bagi][0], bag, strcmp(bagandcontainsbags[bagi][0], bag));
+      if (0 == strcmp(bagandcontainsbags[bagi][0], bag)) {
+        for (int bagi2 = 1; bagandcontainsbags[bagi][bagi2]; bagi2++) {
+          //printf("## '%s' has %d '%s'\n", bag, bagandcontainsbagsamount[bagi][bagi2], bagandcontainsbags[bagi][bagi2]);
+          output += bagandcontainsbagsamount[bagi][bagi2] * 
+            bagsamount(bagandcontainsbags[bagi][bagi2], bagandcontainsbags, bagandcontainsbagsamount);
+        }
+      }
+    }
+    return output;
+  }
+
+  int main() {
+    FILE *f = fopen("07.txt", "r");
+    int output = 0;
+
+    char *bagandcontainsbags[1000][10];
+    int bagandcontainsbagsamount[1000][10];
+    int bagi = 0;
+    char line[1000];
+    while (fgets(line, sizeof(line), f)) {
+      char *ptr = strstr(line, " contain ");
+      ptr[0] = 0;
+      int bagi2 = 0;
+      bagandcontainsbags[bagi][bagi2++] = strdup(line);
+      ptr += strlen(" contain ");
+      if (0 == strcmp(ptr, "no other bags.\n")) {
+        continue;
+      }
+      while (true) {
+        bagandcontainsbagsamount[bagi][bagi2] = ptr[0] - '0';
+        ptr += strlen("5 ");
+        char *ptr2 = strstr(ptr, ", ");
+        if (ptr2 == NULL) {
+          ptr2 = strstr(ptr, ".");
+          ptr2[0] = 0;
+          bagandcontainsbags[bagi][bagi2++] = strdup(ptr);
+          break;
+        } else {
+          ptr2[0] = 0;
+          bagandcontainsbags[bagi][bagi2++] = strdup(ptr);
+          ptr = ptr2 + strlen(", ");
+        }
+      }
+      bagandcontainsbags[bagi][bagi2++] = NULL;
+      bagi++;
+    }
+    bagandcontainsbags[bagi][0] = NULL;
+
+    // remove bag or bags suffix
+    for (int bagi = 0; bagandcontainsbags[bagi][0]; bagi++) {
+      for (int bagi2 = 0; bagandcontainsbags[bagi][bagi2]; bagi2++) {
+        rindex(bagandcontainsbags[bagi][bagi2], ' ')[0] = 0;
+      }
+    }
+
+    // for (int bagi = 0; bagandcontainsbags[bagi][0]; bagi++) {
+    //   printf("## '%s' contains: ", bagandcontainsbags[bagi][0]);
+    //   for (int bagi2 = 1; bagandcontainsbags[bagi][bagi2]; bagi2++) {
+    //     printf("%d '%s', ", bagandcontainsbagsamount[bagi][bagi2], bagandcontainsbags[bagi][bagi2]);
+    //   }
+    //   printf("\n");
+    // }
+
+    printf("= %d\n", bagsamount("shiny gold", bagandcontainsbags, bagandcontainsbagsamount) - 1);
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 421550
+
+ - 421550 correct <2020-12-12 Sat 15:38>
