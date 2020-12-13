@@ -1548,3 +1548,870 @@ Both parts of this puzzle are complete! They provide two gold stars: **
 : = 421550
 
  - 421550 correct <2020-12-12 Sat 15:38>
+* day 8
+** puzzle
+--- Day 8: Handheld Halting ---
+
+Your flight to the major airline hub reaches cruising altitude without incident. While you consider checking the in-flight menu for one of those drinks that come with a little umbrella, you are interrupted by the kid sitting next to you.
+
+Their handheld game console won't turn on! They ask if you can take a look.
+
+You narrow the problem down to a strange infinite loop in the boot code (your puzzle input) of the device. You should be able to fix it, but first you need to be able to run the code in isolation.
+
+The boot code is represented as a text file with one instruction per line of text. Each instruction consists of an operation (acc, jmp, or nop) and an argument (a signed number like +4 or -20).
+
+    acc increases or decreases a single global value called the accumulator by the value given in the argument. For example, acc +7 would increase the accumulator by 7. The accumulator starts at 0. After an acc instruction, the instruction immediately below it is executed next.
+    jmp jumps to a new instruction relative to itself. The next instruction to execute is found using the argument as an offset from the jmp instruction; for example, jmp +2 would skip the next instruction, jmp +1 would continue to the instruction immediately below it, and jmp -20 would cause the instruction 20 lines above to be executed next.
+    nop stands for No OPeration - it does nothing. The instruction immediately below it is executed next.
+
+For example, consider the following program:
+
+nop +0
+acc +1
+jmp +4
+acc +3
+jmp -3
+acc -99
+acc +1
+jmp -4
+acc +6
+
+These instructions are visited in this order:
+
+nop +0  | 1
+acc +1  | 2, 8(!)
+jmp +4  | 3
+acc +3  | 6
+jmp -3  | 7
+acc -99 |
+acc +1  | 4
+jmp -4  | 5
+acc +6  |
+
+First, the nop +0 does nothing. Then, the accumulator is increased from 0 to 1 (acc +1) and jmp +4 sets the next instruction to the other acc +1 near the bottom. After it increases the accumulator from 1 to 2, jmp -4 executes, setting the next instruction to the only acc +3. It sets the accumulator to 5, and jmp -3 causes the program to continue back at the first acc +1.
+
+This is an infinite loop: with this sequence of jumps, the program will run forever. The moment the program tries to run any instruction a second time, you know it will never terminate.
+
+Immediately before the program would run an instruction a second time, the value in the accumulator is 5.
+
+Run your copy of the boot code. Immediately before any instruction is executed a second time, what value is in the accumulator?
+
+Your puzzle answer was 1420.
+--- Part Two ---
+
+After some careful analysis, you believe that exactly one instruction is corrupted.
+
+Somewhere in the program, either a jmp is supposed to be a nop, or a nop is supposed to be a jmp. (No acc instructions were harmed in the corruption of this boot code.)
+
+The program is supposed to terminate by attempting to execute an instruction immediately after the last instruction in the file. By changing exactly one jmp or nop, you can repair the boot code and make it terminate correctly.
+
+For example, consider the same program from above:
+
+nop +0
+acc +1
+jmp +4
+acc +3
+jmp -3
+acc -99
+acc +1
+jmp -4
+acc +6
+
+If you change the first instruction from nop +0 to jmp +0, it would create a single-instruction infinite loop, never leaving that instruction. If you change almost any of the jmp instructions, the program will still eventually find another jmp instruction and loop forever.
+
+However, if you change the second-to-last instruction (from jmp -4 to nop -4), the program terminates! The instructions are visited in this order:
+
+nop +0  | 1
+acc +1  | 2
+jmp +4  | 3
+acc +3  |
+jmp -3  |
+acc -99 |
+acc +1  | 4
+nop -4  | 5
+acc +6  | 6
+
+After the last instruction (acc +6), the program terminates by attempting to run the instruction below the last instruction in the file. With this change, after the program terminates, the accumulator contains the value 8 (acc +1, acc +1, acc +6).
+
+Fix the program so that it terminates normally by changing exactly one jmp (to nop) or nop (to jmp). What is the value of the accumulator after the program terminates?
+
+Your puzzle answer was 1245.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2020-12-12 Sat 20:49>
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <string.h>
+  int main() {
+    FILE *f = fopen("08.txt", "r");
+    char *program[10000];
+    int programi = 0;
+    char line[200];
+    while (fgets(line, sizeof(line), f)) {
+      program[programi++] = strdup(line);
+      program[programi-1][strlen(program[programi-1])-1] = 0;
+    }
+
+    // for (int i = 0; i < programi; i++)
+    //   printf("'%s'\n", program[i]);
+
+    int pc = 0;
+    int acc = 0;
+
+    int pcsseen[10000];
+    int pcsseeni = 0;
+  
+    while (true) {
+
+      for (int i = 0; i < pcsseeni; i++) {
+        if (pc == pcsseen[i]) {
+          printf("= %d\n", acc);
+          return 0;
+        }
+      }
+
+      pcsseen[pcsseeni++] = pc;
+
+      int arg = 0;
+      if (1 == sscanf(program[pc], "nop %d", &arg)) {
+        pc++;
+      } else if (1 == sscanf(program[pc], "acc %d", &arg)) {
+        acc += arg;
+        pc++;
+      } else if (1 == sscanf(program[pc], "jmp %d", &arg)) {
+        pc += arg;
+      }
+    }
+
+    printf("Sdfs\n");
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 1420
+
+ - 1420 correct <2020-12-12 Sat 20:59>
+** part 2
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <string.h>
+  int main() {
+    FILE *f = fopen("08.txt", "r");
+    char *program[10000];
+    int programi = 0;
+    char line[200];
+    while (fgets(line, sizeof(line), f)) {
+      program[programi++] = strdup(line);
+      program[programi-1][strlen(program[programi-1])-1] = 0;
+    }
+
+    // for (int i = 0; i < programi; i++)
+    //   printf("'%s'\n", program[i]);
+
+
+
+    for (int j = 0; j < programi; j++) {
+      int arg = 0;
+      //printf("j=%d\n", j);
+      // swap ins
+      if (1 == sscanf(program[j], "nop %d", &arg)) {
+        sprintf(line, "jmp %d", arg);
+        free(program[j]);
+        program[j] = strdup(line);
+      } else if (1 == sscanf(program[j], "jmp %d", &arg)) {
+        sprintf(line, "nop %d", arg);
+        free(program[j]);
+        program[j] = strdup(line);
+      } else {
+        continue;
+      }
+
+    int pc = 0;
+    int acc = 0;
+    int pcsseen[10000];
+    int pcsseeni = 0;
+    while (true) {
+      if (pc == programi) {
+        printf("= %d\n", acc);
+        return 0;
+      }
+      if (pc < 0 || pc >= programi) {
+        printf("no1\n");
+        break;
+      }
+
+      int seenbefore = 0;
+      for (int i = 0; i < pcsseeni; i++) {
+        if (pc == pcsseen[i]) {
+          //printf("no2\n");
+          seenbefore = 1;
+          //printf("= %d\n", acc);
+          break;
+        }
+      }
+      if (seenbefore) break;
+
+      pcsseen[pcsseeni++] = pc;
+
+      //printf("## '%s' acc=%d, pc=%d\n", program[pc], acc, pc);
+      if (1 == sscanf(program[pc], "nop %d", &arg)) {
+        pc++;
+      } else if (1 == sscanf(program[pc], "acc %d", &arg)) {
+        acc += arg;
+        pc++;
+      } else if (1 == sscanf(program[pc], "jmp %d", &arg)) {
+        pc += arg;
+      }
+    }
+     // swap back
+      if (1 == sscanf(program[j], "nop %d", &arg)) {
+        sprintf(line, "jmp %d", arg);
+        free(program[j]);
+        program[j] = strdup(line);
+      } else if (1 == sscanf(program[j], "jmp %d", &arg)) {
+        sprintf(line, "nop %d", arg);
+        free(program[j]);
+        program[j] = strdup(line);
+      }
+    }
+
+    printf("Sdfs\n");
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 1245
+
+ - 1245 correct <2020-12-12 Sat 21:14>
+* day 9
+** puzzle
+--- Day 9: Encoding Error ---
+
+With your neighbor happily enjoying their video game, you turn your attention to an open data port on the little screen in the seat in front of you.
+
+Though the port is non-standard, you manage to connect it to your computer through the clever use of several paperclips. Upon connection, the port outputs a series of numbers (your puzzle input).
+
+The data appears to be encrypted with the eXchange-Masking Addition System (XMAS) which, conveniently for you, is an old cypher with an important weakness.
+
+XMAS starts by transmitting a preamble of 25 numbers. After that, each number you receive should be the sum of any two of the 25 immediately previous numbers. The two numbers will have different values, and there might be more than one such pair.
+
+For example, suppose your preamble consists of the numbers 1 through 25 in a random order. To be valid, the next number must be the sum of two of those numbers:
+
+    26 would be a valid next number, as it could be 1 plus 25 (or many other pairs, like 2 and 24).
+    49 would be a valid next number, as it is the sum of 24 and 25.
+    100 would not be valid; no two of the previous 25 numbers sum to 100.
+    50 would also not be valid; although 25 appears in the previous 25 numbers, the two numbers in the pair must be different.
+
+Suppose the 26th number is 45, and the first number (no longer an option, as it is more than 25 numbers ago) was 20. Now, for the next number to be valid, there needs to be some pair of numbers among 1-19, 21-25, or 45 that add up to it:
+
+    26 would still be a valid next number, as 1 and 25 are still within the previous 25 numbers.
+    65 would not be valid, as no two of the available numbers sum to it.
+    64 and 66 would both be valid, as they are the result of 19+45 and 21+45 respectively.
+
+Here is a larger example which only considers the previous 5 numbers (and has a preamble of length 5):
+
+35
+20
+15
+25
+47
+40
+62
+55
+65
+95
+102
+117
+150
+182
+127
+219
+299
+277
+309
+576
+
+In this example, after the 5-number preamble, almost every number is the sum of two of the previous 5 numbers; the only number that does not follow this rule is 127.
+
+The first step of attacking the weakness in the XMAS data is to find the first number in the list (after the preamble) which is not the sum of two of the 25 numbers before it. What is the first number that does not have this property?
+
+Your puzzle answer was 104054607.
+--- Part Two ---
+
+The final step in breaking the XMAS encryption relies on the invalid number you just found: you must find a contiguous set of at least two numbers in your list which sum to the invalid number from step 1.
+
+Again consider the above example:
+
+35
+20
+15
+25
+47
+40
+62
+55
+65
+95
+102
+117
+150
+182
+127
+219
+299
+277
+309
+576
+
+In this list, adding up all of the numbers from 15 through 40 produces the invalid number from step 1, 127. (Of course, the contiguous set of numbers in your actual list might be much longer.)
+
+To find the encryption weakness, add together the smallest and largest number in this contiguous range; in this example, these are 15 and 47, producing 62.
+
+What is the encryption weakness in your XMAS-encrypted list of numbers?
+
+Your puzzle answer was 13935797.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2020-12-12 Sat 21:21>
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  int main() {
+    int numberssize = 30;
+    long numbers[numberssize];
+    int numbersistart = 0;
+    int numbersiend = 0;
+
+    FILE *f = fopen("09.txt", "r");
+    char line[100];
+    int seen = 0;
+    while (fgets(line, sizeof(line), f)) {
+      long number = atol(line);
+      // printf("## %ld, old=%d..%d: ", number, numbersistart, numbersiend);
+      // for (int i = numbersistart; i != numbersiend; i = (i + 1) % numberssize)
+      //   printf("%ld, ", numbers[i]);
+      // printf("\n");
+      if (seen++ >= 25) {
+        int valid = 0;
+        for (int i = numbersistart; i != numbersiend; i = (i + 1) % numberssize) {
+          for (int j = numbersistart; j != numbersiend; j = (j + 1) % numberssize) {
+            if (numbers[i] + numbers[j] == number) { valid = 1; break; }
+          }
+        }
+        if (!valid) {
+         printf("= %ld\n", number);
+         return 0;
+        }
+
+        numbersistart = (numbersistart+1) % numberssize;
+      }
+      numbers[numbersiend] = number;
+      numbersiend = (numbersiend+1) % numberssize;
+      //if (seen > 2)break;
+    }
+
+    printf("sdf\n");
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 104054607
+
+ - 26 wrong <2020-12-12 Sat 21:30>
+ - 104054607 correct <2020-12-12 Sat 21:38>
+** part 2
+ - <2020-12-12 Sat 21:38>
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  int main() {
+    long numbers[10000];
+    int numbersi = 0;
+
+    FILE *f = fopen("09.txt", "r");
+    char line[100];
+    while (fgets(line, sizeof(line), f)) {
+      long number = atol(line);
+      numbers[numbersi++] = number;
+    }
+
+    for (int i = 0; i < numbersi; i++) {
+      long sum = 0;
+      long min = 999999999999999;
+      long max = 0;
+      for (int j = i; j < numbersi; j++) {
+        if (numbers[j] < min) min = numbers[j];
+        if (numbers[j] > max) max = numbers[j];
+        sum += numbers[j];
+        if (sum == 104054607) {
+        //if (sum == 127) {
+          // printf(" %d..%d %d..%d\n", i, j, numbers[i], numbers[j]);
+          printf("= %d\n", min + max);
+          return 0;
+        }
+        //if (sum > 127) break;
+        if (sum > 104054607) break;
+      }
+    }
+
+    printf("sdf\n");
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 13935797
+
+ - 11828200 too low <2020-12-12 Sat 21:41>
+ - 13935797 correct <2020-12-12 Sat 21:46>
+* day 10
+** puzzle
+--- Day 10: Adapter Array ---
+
+Patched into the aircraft's data port, you discover weather forecasts of a massive tropical storm. Before you can figure out whether it will impact your vacation plans, however, your device suddenly turns off!
+
+Its battery is dead.
+
+You'll need to plug it in. There's only one problem: the charging outlet near your seat produces the wrong number of jolts. Always prepared, you make a list of all of the joltage adapters in your bag.
+
+Each of your joltage adapters is rated for a specific output joltage (your puzzle input). Any given adapter can take an input 1, 2, or 3 jolts lower than its rating and still produce its rated output joltage.
+
+In addition, your device has a built-in joltage adapter rated for 3 jolts higher than the highest-rated adapter in your bag. (If your adapter list were 3, 9, and 6, your device's built-in adapter would be rated for 12 jolts.)
+
+Treat the charging outlet near your seat as having an effective joltage rating of 0.
+
+Since you have some time to kill, you might as well test all of your adapters. Wouldn't want to get to your resort and realize you can't even charge your device!
+
+If you use every adapter in your bag at once, what is the distribution of joltage differences between the charging outlet, the adapters, and your device?
+
+For example, suppose that in your bag, you have adapters with the following joltage ratings:
+
+16
+10
+15
+5
+1
+11
+7
+19
+6
+12
+4
+
+With these adapters, your device's built-in joltage adapter would be rated for 19 + 3 = 22 jolts, 3 higher than the highest-rated adapter.
+
+Because adapters can only connect to a source 1-3 jolts lower than its rating, in order to use every adapter, you'd need to choose them like this:
+
+    The charging outlet has an effective rating of 0 jolts, so the only adapters that could connect to it directly would need to have a joltage rating of 1, 2, or 3 jolts. Of these, only one you have is an adapter rated 1 jolt (difference of 1).
+    From your 1-jolt rated adapter, the only choice is your 4-jolt rated adapter (difference of 3).
+    From the 4-jolt rated adapter, the adapters rated 5, 6, or 7 are valid choices. However, in order to not skip any adapters, you have to pick the adapter rated 5 jolts (difference of 1).
+    Similarly, the next choices would need to be the adapter rated 6 and then the adapter rated 7 (with difference of 1 and 1).
+    The only adapter that works with the 7-jolt rated adapter is the one rated 10 jolts (difference of 3).
+    From 10, the choices are 11 or 12; choose 11 (difference of 1) and then 12 (difference of 1).
+    After 12, only valid adapter has a rating of 15 (difference of 3), then 16 (difference of 1), then 19 (difference of 3).
+    Finally, your device's built-in adapter is always 3 higher than the highest adapter, so its rating is 22 jolts (always a difference of 3).
+
+In this example, when using every adapter, there are 7 differences of 1 jolt and 5 differences of 3 jolts.
+
+Here is a larger example:
+
+28
+33
+18
+42
+31
+14
+46
+20
+48
+47
+24
+23
+49
+45
+19
+38
+39
+11
+1
+32
+25
+35
+8
+17
+7
+9
+4
+2
+34
+10
+3
+
+In this larger example, in a chain that uses all of the adapters, there are 22 differences of 1 jolt and 10 differences of 3 jolts.
+
+Find a chain that uses all of your adapters to connect the charging outlet to your device's built-in adapter and count the joltage differences between the charging outlet, the adapters, and your device. What is the number of 1-jolt differences multiplied by the number of 3-jolt differences?
+
+Your puzzle answer was 2775.
+--- Part Two ---
+
+To completely determine whether you have enough adapters, you'll need to figure out how many different ways they can be arranged. Every arrangement needs to connect the charging outlet to your device. The previous rules about when adapters can successfully connect still apply.
+
+The first example above (the one that starts with 16, 10, 15) supports the following arrangements:
+
+(0), 1, 4, 5, 6, 7, 10, 11, 12, 15, 16, 19, (22)
+(0), 1, 4, 5, 6, 7, 10, 12, 15, 16, 19, (22)
+(0), 1, 4, 5, 7, 10, 11, 12, 15, 16, 19, (22)
+(0), 1, 4, 5, 7, 10, 12, 15, 16, 19, (22)
+(0), 1, 4, 6, 7, 10, 11, 12, 15, 16, 19, (22)
+(0), 1, 4, 6, 7, 10, 12, 15, 16, 19, (22)
+(0), 1, 4, 7, 10, 11, 12, 15, 16, 19, (22)
+(0), 1, 4, 7, 10, 12, 15, 16, 19, (22)
+
+(The charging outlet and your device's built-in adapter are shown in parentheses.) Given the adapters from the first example, the total number of arrangements that connect the charging outlet to your device is 8.
+
+The second example above (the one that starts with 28, 33, 18) has many arrangements. Here are a few:
+
+(0), 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 17, 18, 19, 20, 23, 24, 25, 28, 31,
+32, 33, 34, 35, 38, 39, 42, 45, 46, 47, 48, 49, (52)
+
+(0), 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 17, 18, 19, 20, 23, 24, 25, 28, 31,
+32, 33, 34, 35, 38, 39, 42, 45, 46, 47, 49, (52)
+
+(0), 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 17, 18, 19, 20, 23, 24, 25, 28, 31,
+32, 33, 34, 35, 38, 39, 42, 45, 46, 48, 49, (52)
+
+(0), 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 17, 18, 19, 20, 23, 24, 25, 28, 31,
+32, 33, 34, 35, 38, 39, 42, 45, 46, 49, (52)
+
+(0), 1, 2, 3, 4, 7, 8, 9, 10, 11, 14, 17, 18, 19, 20, 23, 24, 25, 28, 31,
+32, 33, 34, 35, 38, 39, 42, 45, 47, 48, 49, (52)
+
+(0), 3, 4, 7, 10, 11, 14, 17, 20, 23, 25, 28, 31, 34, 35, 38, 39, 42, 45,
+46, 48, 49, (52)
+
+(0), 3, 4, 7, 10, 11, 14, 17, 20, 23, 25, 28, 31, 34, 35, 38, 39, 42, 45,
+46, 49, (52)
+
+(0), 3, 4, 7, 10, 11, 14, 17, 20, 23, 25, 28, 31, 34, 35, 38, 39, 42, 45,
+47, 48, 49, (52)
+
+(0), 3, 4, 7, 10, 11, 14, 17, 20, 23, 25, 28, 31, 34, 35, 38, 39, 42, 45,
+47, 49, (52)
+
+(0), 3, 4, 7, 10, 11, 14, 17, 20, 23, 25, 28, 31, 34, 35, 38, 39, 42, 45,
+48, 49, (52)
+
+In total, this set of adapters can connect the charging outlet to your device in 19208 distinct arrangements.
+
+You glance back down at your bag and try to remember why you brought so many adapters; there must be more than a trillion valid ways to arrange them! Surely, there must be an efficient way to count the arrangements.
+
+What is the total number of distinct ways you can arrange the adapters to connect the charging outlet to your device?
+
+Your puzzle answer was 518344341716992.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2020-12-13 Sun 18:50>
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+
+  int adapters[200];
+  int adaptersi = 0;
+
+  void findchain(int jolt, int chain[200], int chaini) {
+    //if (chaini >= adaptersi/2) return;
+    //printf("## %d %d\n", jolt, chaini);
+    if (chaini == adaptersi) {
+      int diff1s = 0;
+      int diff3s = 0;
+      int curjolt = 0;
+      for (int i = 0; i < chaini; i++) {
+        if (chain[i] - curjolt == 1) diff1s++;
+        if (chain[i] - curjolt == 3) diff3s++;
+        curjolt = chain[i];
+      }
+      //printf("= %d\n", diff1s * diff3s);
+      return;
+    }
+    for (int i = 0; i < adaptersi; i++) {
+      //printf("#### %d %d\n", adapters[i], jolt);
+      if (jolt <= adapters[i] - 1 && jolt >= adapters[i] - 3) {
+        chain[chaini++] = adapters[i];
+        findchain(adapters[i], chain, chaini+1);
+      }
+    }
+  }
+
+  int main() {
+    FILE *f = fopen("10.txt", "r");
+    char line[100];
+    while (fgets(line, sizeof(line), f)) {
+      adapters[adaptersi++] = atoi(line);
+    }
+
+    int chain[200];
+
+    findchain(0, chain, 0);
+
+    // for (int i = 0; i < adaptersi; i++) {
+    //   printf("%d\n", adapters[i]);
+    // }
+
+    // printf("sdf\n");
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+
+** part 1 B
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+
+  int adapters[200] = {0};
+  int adaptersi = 0;
+  int inputjolt = 0;
+
+  void findchain(int jolt, int chain[200], int chaini) {
+      //printf("## jolt=%d chaini=%d i=%d\n", jolt, chaini, adaptersi);
+      if (chaini >= adaptersi) {
+      //printf("##2 jolt=%d chaini=%d chainlast=%d  inputjolt=%d\n", jolt, chaini, chain[chaini-1], inputjolt);
+      
+              int diff1s = 0;
+              int diff3s = 0;
+              int curjolt = 0;
+              for (int i = 0; i < chaini; i++) {
+                  if (chain[i] - curjolt == 1) diff1s++;
+                  if (chain[i] - curjolt == 3) diff3s++;
+                  curjolt = chain[i];
+              }
+              printf("= %d\n", diff1s * diff3s);
+              exit(0);
+          return;
+      }
+
+      for (int i = 1; i <= 3; i++) {
+          if (adapters[jolt+i]) {
+              chain[chaini++] = jolt+i;
+              findchain(jolt+i, chain, chaini);
+          }
+      }
+  }
+
+  int main() {
+      FILE *f = fopen("10.txt", "r");
+      char line[100];
+      while (fgets(line, sizeof(line), f)) {
+          int jolt = atoi(line);
+          adapters[jolt] = 1;
+          adaptersi++;
+          if (jolt > inputjolt) inputjolt = jolt;
+      }
+      inputjolt += 3;
+      adapters[inputjolt] = 1;
+      adaptersi++;
+
+      int chain[200];
+      findchain(0, chain, 0);
+
+      // for (int i = 0; i < adaptersi; i++) {
+      //   printf("%d\n", adapters[i]);
+      // }
+
+      printf("sdf\n");
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 2775
+
+ - 2775 correct <2020-12-13 Sun 19:29>
+** part 2
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+
+  int adapters[200] = {0};
+  int adaptersi = 0;
+  int inputjolt = 0;
+  int combinations = 0;
+
+  void findchain(int jolt, int chain[200], int chaini) {
+      //printf("## jolt=%d chaini=%d i=%d\n", jolt, chaini, adaptersi);
+      if (chaini >= adaptersi) {
+      //printf("##2 jolt=%d chaini=%d chainlast=%d  inputjolt=%d\n", jolt, chaini, chain[chaini-1], inputjolt);
+
+              int diff1s = 0;
+              int diff3s = 0;
+              int curjolt = 0;
+              for (int i = 0; i < chaini; i++) {
+                  if (chain[i] - curjolt == 1) diff1s++;
+                  if (chain[i] - curjolt == 3) diff3s++;
+                  curjolt = chain[i];
+              }
+              combinations++;
+              // printf("= %d\n", diff1s * diff3s);
+              // exit(0);
+          return;
+      }
+
+      for (int i = 1; i <= 3; i++) {
+          if (adapters[jolt+i]) {
+              chain[chaini++] = jolt+i;
+              findchain(jolt+i, chain, chaini);
+          }
+      }
+  }
+
+  int compare(const void *aa, const void *bb) {
+    int a = *(int*)aa;
+    int b = *(int*)bb;
+
+    return a < b ? -1 : a == b ? 0 : 1;
+  }
+
+  int main() {
+      FILE *f = fopen("10t2.txt", "r");
+      char line[100];
+      adapters[adaptersi++] = 0;
+      while (fgets(line, sizeof(line), f)) {
+          int jolt = atoi(line);
+          adapters[adaptersi++] = jolt;
+          if (jolt > inputjolt) inputjolt = jolt;
+      }
+      inputjolt += 3;
+      adapters[adaptersi++] = inputjolt;
+
+      qsort(adapters, adaptersi, sizeof(int), compare);
+
+      // long combinations = 1;
+      // for (int i = 0; i < adaptersi; i++) {
+      //   int reachable = 0;
+      //   for (int j = i+1; j < adaptersi; j++) {
+      //     if (adapters[j] <= adapters[i] + 3) reachable++;
+      //   }
+      //   if (reachable >= 2) {
+      //     combinations = combinations << reachable;
+      //     i += reachable-1;
+      //   }
+      //   printf("%d reachable=%d combinations=%ld\n", adapters[i], reachable, combinations);
+      // }
+
+      long combinations = 1;
+      for (int i = adaptersi-1; i >= 0; i--) {
+        int reachable = 0;
+        for (int j = i-1; j >= 0; j--) {
+          if (adapters[i] <= adapters[j] + 3) reachable++;
+        }
+        if (reachable >= 2) {
+          //combinations = combinations << reachable;
+          combinations *= 2;
+          //i -= reachable-1;
+        }
+        //for (int j = 0; j < reachable-1; j++) {
+        //   combinations *= 2;
+        // }
+        printf("%d reachable=%d combinations=%ld\n", adapters[i], reachable, combinations);
+      }
+      //combinations /= 2;
+
+
+      printf("= %d\n", combinations);
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+52 reachable=1 combinations=1
+49 reachable=3 combinations=2
+48 reachable=3 combinations=4
+47 reachable=2 combinations=8
+46 reachable=1 combinations=8
+45 reachable=1 combinations=8
+42 reachable=1 combinations=8
+39 reachable=1 combinations=8
+38 reachable=1 combinations=8
+35 reachable=3 combinations=16
+34 reachable=3 combinations=32
+33 reachable=2 combinations=64
+32 reachable=1 combinations=64
+31 reachable=1 combinations=64
+28 reachable=1 combinations=64
+25 reachable=2 combinations=128
+24 reachable=1 combinations=128
+23 reachable=1 combinations=128
+20 reachable=3 combinations=256
+19 reachable=2 combinations=512
+18 reachable=1 combinations=512
+17 reachable=1 combinations=512
+14 reachable=1 combinations=512
+11 reachable=3 combinations=1024
+10 reachable=3 combinations=2048
+9 reachable=2 combinations=4096
+8 reachable=1 combinations=4096
+7 reachable=1 combinations=4096
+4 reachable=3 combinations=8192
+3 reachable=3 combinations=16384
+2 reachable=2 combinations=32768
+1 reachable=1 combinations=32768
+0 reachable=0 combinations=32768
+= 32768
+#+end_example
+** part 2 B
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+
+  int adapters[200] = {0};
+  int adaptersi = 0;
+  int inputjolt = 0;
+
+  long cache[300] = {-1};
+ 
+  long combs(int jolt) {
+    //printf("## jolt=%d, hasadapter=%d\n", jolt, adapters[jolt]);
+    if (jolt == 0) return 1;
+    if (jolt < 0 || !adapters[jolt]) return 0;
+    if (cache[jolt]) return cache[jolt];
+    long out = combs(jolt-1) + combs(jolt-2) + combs(jolt-3);
+    cache[jolt] = out;
+    return out;
+  }
+
+  int main() {
+      FILE *f = fopen("10.txt", "r");
+      char line[100];
+      while (fgets(line, sizeof(line), f)) {
+          int jolt = atoi(line);
+          adapters[jolt] = 1;
+          adaptersi++;
+          if (jolt > inputjolt) inputjolt = jolt;
+      }
+      inputjolt += 3;
+      adapters[inputjolt] = 1;
+      adaptersi++;
+
+      for (int i = 0; i <= inputjolt; i++) {
+      //   if (adapters[i]) printf("%d\n", i);
+      }
+
+      printf("= %ld\n", combs(inputjolt));
+      return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: = 518344341716992
+
+ - 518344341716992 <2020-12-13 Sun 20:22>
+ - had to look up solution. Forgot about caching recursive method
