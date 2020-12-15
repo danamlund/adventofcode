@@ -2811,3 +2811,576 @@ Both parts of this puzzle are complete! They provide two gold stars: **
 
  - 2013 correct <2020-12-14 Mon 20:10>
  
+* day 12
+** puzzle
+--- Day 12: Rain Risk ---
+
+Your ferry made decent progress toward the island, but the storm came in faster than anyone expected. The ferry needs to take evasive actions!
+
+Unfortunately, the ship's navigation computer seems to be malfunctioning; rather than giving a route directly to safety, it produced extremely circuitous instructions. When the captain uses the PA system to ask if anyone can help, you quickly volunteer.
+
+The navigation instructions (your puzzle input) consists of a sequence of single-character actions paired with integer input values. After staring at them for a few minutes, you work out what they probably mean:
+
+    Action N means to move north by the given value.
+    Action S means to move south by the given value.
+    Action E means to move east by the given value.
+    Action W means to move west by the given value.
+    Action L means to turn left the given number of degrees.
+    Action R means to turn right the given number of degrees.
+    Action F means to move forward by the given value in the direction the ship is currently facing.
+
+The ship starts by facing east. Only the L and R actions change the direction the ship is facing. (That is, if the ship is facing east and the next instruction is N10, the ship would move north 10 units, but would still move east if the following action were F.)
+
+For example:
+
+F10
+N3
+F7
+R90
+F11
+
+These instructions would be handled as follows:
+
+    F10 would move the ship 10 units east (because the ship starts by facing east) to east 10, north 0.
+    N3 would move the ship 3 units north to east 10, north 3.
+    F7 would move the ship another 7 units east (because the ship is still facing east) to east 17, north 3.
+    R90 would cause the ship to turn right by 90 degrees and face south; it remains at east 17, north 3.
+    F11 would move the ship 11 units south to east 17, south 8.
+
+At the end of these instructions, the ship's Manhattan distance (sum of the absolute values of its east/west position and its north/south position) from its starting position is 17 + 8 = 25.
+
+Figure out where the navigation instructions lead. What is the Manhattan distance between that location and the ship's starting position?
+
+Your puzzle answer was 2847.
+--- Part Two ---
+
+Before you can give the destination to the captain, you realize that the actual action meanings were printed on the back of the instructions the whole time.
+
+Almost all of the actions indicate how to move a waypoint which is relative to the ship's position:
+
+    Action N means to move the waypoint north by the given value.
+    Action S means to move the waypoint south by the given value.
+    Action E means to move the waypoint east by the given value.
+    Action W means to move the waypoint west by the given value.
+    Action L means to rotate the waypoint around the ship left (counter-clockwise) the given number of degrees.
+    Action R means to rotate the waypoint around the ship right (clockwise) the given number of degrees.
+    Action F means to move forward to the waypoint a number of times equal to the given value.
+
+The waypoint starts 10 units east and 1 unit north relative to the ship. The waypoint is relative to the ship; that is, if the ship moves, the waypoint moves with it.
+
+For example, using the same instructions as above:
+
+    F10 moves the ship to the waypoint 10 times (a total of 100 units east and 10 units north), leaving the ship at east 100, north 10. The waypoint stays 10 units east and 1 unit north of the ship.
+    N3 moves the waypoint 3 units north to 10 units east and 4 units north of the ship. The ship remains at east 100, north 10.
+    F7 moves the ship to the waypoint 7 times (a total of 70 units east and 28 units north), leaving the ship at east 170, north 38. The waypoint stays 10 units east and 4 units north of the ship.
+    R90 rotates the waypoint around the ship clockwise 90 degrees, moving it to 4 units east and 10 units south of the ship. The ship remains at east 170, north 38.
+    F11 moves the ship to the waypoint 11 times (a total of 44 units east and 110 units south), leaving the ship at east 214, south 72. The waypoint stays 4 units east and 10 units south of the ship.
+
+After these operations, the ship's Manhattan distance from its starting position is 214 + 72 = 286.
+
+Figure out where the navigation instructions actually lead. What is the Manhattan distance between that location and the ship's starting position?
+
+Your puzzle answer was 29839.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2020-12-15 Tue 18:30>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <stdlib.h>
+int main() {
+  FILE *f = fopen("12.txt", "r");
+  char line[100];
+  int x = 0;
+  int y = 0;
+  int rotation = 90;
+  while (fgets(line, sizeof(line), f)) {
+    int val = atoi(line+1);
+    switch (line[0]) {
+      case 'N': y+=val; break;
+      case 'S': y-=val; break;
+      case 'W': x-=val; break;
+      case 'E': x+=val; break;
+      case 'F': 
+        switch (rotation) {
+        case 0: y+=val; break;
+        case 90: x+=val; break;
+        case 180: y-=val; break;
+        case 270: x-=val; break;
+        default: printf("## ! %d (%d)\n", rotation, val); return 0;
+        }
+        break;
+      case 'L': rotation = (360+rotation-val) % 360; break;
+      case 'R': rotation = (360+rotation+val) % 360; break;
+      default: printf("##2\n"); return 0;
+    }
+    //printf("%d,%d  r=%d  '%s'", x, y, rotation, line);
+  }
+
+  printf("= %d\n", abs(x) + abs(y));
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 2847
+
+ - 581 too low <2020-12-15 Tue 18:41>
+ - 2847 correct <2020-12-15 Tue 18:43>
+** part 2
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <stdlib.h>
+int main() {
+  FILE *f = fopen("12.txt", "r");
+  char line[100];
+  int sx = 0;
+  int sy = 0;
+  int x = 10;
+  int y = 1;
+  while (fgets(line, sizeof(line), f)) {
+    int val = atoi(line+1);
+    switch (line[0]) {
+      case 'N': y+=val; break;
+      case 'S': y-=val; break;
+      case 'W': x-=val; break;
+      case 'E': x+=val; break;
+      case 'F': 
+        sx+=x*val;
+        sy+=y*val;
+        break;
+      case 'L': 
+      while (val > 0) {
+        int tmp = y;
+        y = x;
+        x = -tmp;
+        val -= 90;
+      }
+      break;
+      case 'R': 
+      while (val > 0) {
+        for (int i = 0; i < 3; i++) {
+        int tmp = y;
+        y = x;
+        x = -tmp;
+        }
+        val -= 90;
+      }
+      break;
+      default: printf("##2\n"); return 0;
+    }
+    //printf("s=%d,%d w=%d,%d  '%s'", sx, sy, x, y, line);
+  }
+
+  printf("= %d\n", abs(sx) + abs(sy));
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 29839
+
+ - 29839 correct <2020-12-15 Tue 18:52>
+* day 13
+** puzzle
+--- Day 13: Shuttle Search ---
+
+Your ferry can make it safely to a nearby port, but it won't get much further. When you call to book another ship, you discover that no ships embark from that port to your vacation island. You'll need to get from the port to the nearest airport.
+
+Fortunately, a shuttle bus service is available to bring you from the sea port to the airport! Each bus has an ID number that also indicates how often the bus leaves for the airport.
+
+Bus schedules are defined based on a timestamp that measures the number of minutes since some fixed reference point in the past. At timestamp 0, every bus simultaneously departed from the sea port. After that, each bus travels to the airport, then various other locations, and finally returns to the sea port to repeat its journey forever.
+
+The time this loop takes a particular bus is also its ID number: the bus with ID 5 departs from the sea port at timestamps 0, 5, 10, 15, and so on. The bus with ID 11 departs at 0, 11, 22, 33, and so on. If you are there when the bus departs, you can ride that bus to the airport!
+
+Your notes (your puzzle input) consist of two lines. The first line is your estimate of the earliest timestamp you could depart on a bus. The second line lists the bus IDs that are in service according to the shuttle company; entries that show x must be out of service, so you decide to ignore them.
+
+To save time once you arrive, your goal is to figure out the earliest bus you can take to the airport. (There will be exactly one such bus.)
+
+For example, suppose you have the following notes:
+
+939
+7,13,x,x,59,x,31,19
+
+Here, the earliest timestamp you could depart is 939, and the bus IDs in service are 7, 13, 59, 31, and 19. Near timestamp 939, these bus IDs depart at the times marked D:
+
+time   bus 7   bus 13  bus 59  bus 31  bus 19
+929      .       .       .       .       .
+930      .       .       .       D       .
+931      D       .       .       .       D
+932      .       .       .       .       .
+933      .       .       .       .       .
+934      .       .       .       .       .
+935      .       .       .       .       .
+936      .       D       .       .       .
+937      .       .       .       .       .
+938      D       .       .       .       .
+939      .       .       .       .       .
+940      .       .       .       .       .
+941      .       .       .       .       .
+942      .       .       .       .       .
+943      .       .       .       .       .
+944      .       .       D       .       .
+945      D       .       .       .       .
+946      .       .       .       .       .
+947      .       .       .       .       .
+948      .       .       .       .       .
+949      .       D       .       .       .
+
+The earliest bus you could take is bus ID 59. It doesn't depart until timestamp 944, so you would need to wait 944 - 939 = 5 minutes before it departs. Multiplying the bus ID by the number of minutes you'd need to wait gives 295.
+
+What is the ID of the earliest bus you can take to the airport multiplied by the number of minutes you'll need to wait for that bus?
+
+Your puzzle answer was 2305.
+--- Part Two ---
+
+The shuttle company is running a contest: one gold coin for anyone that can find the earliest timestamp such that the first bus ID departs at that time and each subsequent listed bus ID departs at that subsequent minute. (The first line in your input is no longer relevant.)
+
+For example, suppose you have the same list of bus IDs as above:
+
+7,13,x,x,59,x,31,19
+
+An x in the schedule means there are no constraints on what bus IDs must depart at that time.
+
+This means you are looking for the earliest timestamp (called t) such that:
+
+    Bus ID 7 departs at timestamp t.
+    Bus ID 13 departs one minute after timestamp t.
+    There are no requirements or restrictions on departures at two or three minutes after timestamp t.
+    Bus ID 59 departs four minutes after timestamp t.
+    There are no requirements or restrictions on departures at five minutes after timestamp t.
+    Bus ID 31 departs six minutes after timestamp t.
+    Bus ID 19 departs seven minutes after timestamp t.
+
+The only bus departures that matter are the listed bus IDs at their specific offsets from t. Those bus IDs can depart at other times, and other bus IDs can depart at those times. For example, in the list above, because bus ID 19 must depart seven minutes after the timestamp at which bus ID 7 departs, bus ID 7 will always also be departing with bus ID 19 at seven minutes after timestamp t.
+
+In this example, the earliest timestamp at which this occurs is 1068781:
+
+time     bus 7   bus 13  bus 59  bus 31  bus 19
+1068773    .       .       .       .       .
+1068774    D       .       .       .       .
+1068775    .       .       .       .       .
+1068776    .       .       .       .       .
+1068777    .       .       .       .       .
+1068778    .       .       .       .       .
+1068779    .       .       .       .       .
+1068780    .       .       .       .       .
+1068781    D       .       .       .       .
+1068782    .       D       .       .       .
+1068783    .       .       .       .       .
+1068784    .       .       .       .       .
+1068785    .       .       D       .       .
+1068786    .       .       .       .       .
+1068787    .       .       .       D       .
+1068788    D       .       .       .       D
+1068789    .       .       .       .       .
+1068790    .       .       .       .       .
+1068791    .       .       .       .       .
+1068792    .       .       .       .       .
+1068793    .       .       .       .       .
+1068794    .       .       .       .       .
+1068795    D       D       .       .       .
+1068796    .       .       .       .       .
+1068797    .       .       .       .       .
+
+In the above example, bus ID 7 departs at timestamp 1068788 (seven minutes after t). This is fine; the only requirement on that minute is that bus ID 19 departs then, and it does.
+
+Here are some other examples:
+
+    The earliest timestamp that matches the list 17,x,13,19 is 3417.
+    67,7,59,61 first occurs at timestamp 754018.
+    67,x,7,59,61 first occurs at timestamp 779210.
+    67,7,x,59,61 first occurs at timestamp 1261476.
+    1789,37,47,1889 first occurs at timestamp 1202161486.
+
+However, with so many bus IDs in your list, surely the actual earliest timestamp will be larger than 100000000000000!
+
+What is the earliest timestamp such that all of the listed bus IDs depart at offsets matching their positions in the list?
+
+Your puzzle answer was 552612234243498.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2020-12-15 Tue 19:12>
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  int main() {
+    FILE *f = fopen("13.txt", "r");
+    char line[1024];
+    fgets(line, sizeof(line), f);
+    int depart = atoi(line);
+    fgets(line, sizeof(line), f);
+    char *ptr = line;
+
+    int times[1000];
+    int timesi = 0;
+
+    for (int i = 0; line[i]; i++) {
+      if (line[i] == ',' || line[i+1] == 0) {
+        //printf("##1 '%s'\n##2 '%s'\n", ptr, line+i);
+        line[i++] = 0;
+        if (ptr[0] != 'x') {
+          int time = atoi(ptr);
+          times[timesi++] = time;
+        }
+        ptr = line+i;
+      }
+    }
+    timesi--;
+
+    // for (int i = 0; i < timesi; i++) {
+    //   printf("%d\n", times[i]);
+    // }
+
+    int earliestbus = 0;
+    int earliesttime = 999999;
+    for (int i = 0; i < timesi; i++) {
+     int time = ((depart / times[i])+1) * times[i];
+     printf("%d t=%d %d\n", times[i], time, time-depart);
+     if (time >= depart) {
+        if (time-depart < earliesttime) {
+          earliesttime = time-depart;
+          earliestbus = times[i];
+        }
+      }
+    }
+
+    printf("= %d\n", earliesttime * earliestbus);
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+13 t=1001299 12
+37 t=1001294 7
+461 t=1001292 5
+17 t=1001300 13
+19 t=1001300 13
+29 t=1001312 25
+739 t=1001345 58
+41 t=1001302 15
+23 t=1001305 18
+= 2305
+#+end_example
+
+ - 2305 correct <2020-12-15 Tue 19:28>
+
+** part 2
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  int main() {
+    FILE *f = fopen("13.txt", "r");
+    char line[1024];
+    fgets(line, sizeof(line), f);
+    int depart = atoi(line);
+    fgets(line, sizeof(line), f);
+    char *ptr = line;
+
+    int times[1000];
+    int timesi = 0;
+
+    for (int i = 0; line[i]; i++) {
+      if (line[i] == ',' || line[i+1] == 0) {
+        //printf("##1 '%s'\n##2 '%s'\n", ptr, line+i);
+        line[i++] = 0;
+        int time = -1;
+        if (ptr[0] != 'x') {
+          time = atoi(ptr);
+        }
+        times[timesi++] = time;
+        ptr = line+i;
+      }
+    }
+    timesi--;
+
+    long firstt = -1;
+    int firsttimesi = 0;
+    for (int i = 0; i < timesi; i++) {
+      if (times[i] != -1) {
+        firstt = times[i];
+        firsttimesi = i;
+        break;
+      }
+    }
+
+    int ii = 0;
+    for (int i = firsttimesi+1; i < timesi; i++) {
+      if (times[i] != -1)
+        //printf("t*%d + %d = %c*%d and ", times[firsttimesi], i, 'a'+ii++, times[i]);
+        printf("t*%d mod %d = %d and ", times[firsttimesi], times[i], i);
+    }
+    printf("\n");
+    return 0;
+
+    // t*17
+
+
+
+    while (true) {
+      firstt += times[firsttimesi];
+      int works = 1;
+      for (int i = firsttimesi+1; i < timesi; i++) {
+        if (times[i] == -1) continue;
+          long time = ((firstt / times[i])+1) * times[i];
+          if (time - i != firstt) { works = 0; break; }
+       }
+      if (works) { printf("= %ld %d\n", firstt, firstt/times[firsttimesi]); break; }
+    }
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: t*13 mod 37 = 7 and t*13 mod 461 = 13 and t*13 mod 17 = 27 and t*13 mod 19 = 32 and t*13 mod 29 = 42 and t*13 mod 739 = 44 and t*13 mod 41 = 54 and t*13 mod 23 = 67 and
+
+** part 2 B
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  int main() {
+    FILE *f = fopen("13.txt", "r");
+    char line[1024];
+    fgets(line, sizeof(line), f);
+    int depart = atoi(line);
+    fgets(line, sizeof(line), f);
+    char *ptr = line;
+
+    int times[1000];
+    int timesi = 0;
+
+    for (int i = 0; line[i]; i++) {
+      if (line[i] == ',' || line[i+1] == 0) {
+        //printf("##1 '%s'\n##2 '%s'\n", ptr, line+i);
+        line[i++] = 0;
+        int time = -1;
+        if (ptr[0] != 'x') {
+          time = atoi(ptr);
+        }
+        times[timesi++] = time;
+        ptr = line+i;
+      }
+    }
+    timesi--;
+
+    long firstt = -1;
+    int firsttimesi = 0;
+    for (int i = 0; i < timesi; i++) {
+      if (times[i] != -1) {
+        firstt = times[i];
+        firsttimesi = i;
+        break;
+      }
+    }
+
+    int ii = 0;
+    for (int i = firsttimesi+1; i < timesi; i++) {
+      if (times[i] != -1)
+        //printf("t*%d + %d = %c*%d and ", times[firsttimesi], i, 'a'+ii++, times[i]);
+        printf("%d mod %d = %d\n", times[firsttimesi], times[i], i);
+    }
+    printf("\n");
+
+    // chinese remainder theorem sieve
+
+    // x mod 5 = 4
+    // x mod 4 = 3
+    // x mod 3 = 0
+    // 
+    // 4 mod 4 = 0, continue
+    // 4 + 5 = 9 mod 4 = 1, continue
+    // 9 + 5 = 14 mod 4 = 2, continue
+    // 14 + 5 = 19 mod 4 = 3, OK
+    // 19 mod 3 = 1, continue
+    // 19 + (5*4) = 39 mod 3 = 0 ok
+    // result is ???
+
+    long v = -1;
+    int add = -1;
+    int previ = -1;
+    //long x = times[firsttimesi];
+    for (int i = firsttimesi+1; i < timesi; i++) {
+      if (times[i] != -1) {
+        if (v == -1) { previ = i; v = i; add = times[i]; }
+        else {
+          while (true) {
+            v = (v+add) % previ;
+            if (v == i) break;
+          }
+          add *= i;
+          previ = i;
+        }
+      }
+    }
+
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+
+** part 2 C
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  #include <stdlib.h>
+  int main() {
+    FILE *f = fopen("13.txt", "r");
+    char line[1024];
+    fgets(line, sizeof(line), f);
+    int depart = atoi(line);
+    fgets(line, sizeof(line), f);
+    char *ptr = line;
+
+    int times[1000];
+    int timesi = 0;
+
+    for (int i = 0; line[i]; i++) {
+      if (line[i] == ',' || line[i+1] == 0) {
+        //printf("##1 '%s'\n##2 '%s'\n", ptr, line+i);
+        line[i++] = 0;
+        int time = -1;
+        if (ptr[0] != 'x') {
+          time = atoi(ptr);
+        }
+        times[timesi++] = time;
+        ptr = line+i;
+      }
+    }
+    timesi--;
+
+    long t = 0;
+    long add = 1;
+    for (int i = 0; i < timesi; i++) {
+      if (times[i] != -1) {
+        while (((t+i) % times[i]) != 0) {
+          t += add;
+        }
+        printf("## t=%ld, add=%ld,  i=%d,  time=%d\n", t, add, i, times[i]);
+        add *= times[i];
+      }
+    }
+
+    printf("= %ld\n", t);
+
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+## t=0, add=1,  i=0,  time=13
+## t=104, add=13,  i=7,  time=37
+## t=185770, add=481,  i=13,  time=461
+## t=850993, add=221741,  i=27,  time=17
+## t=19698978, add=3769597,  i=32,  time=19
+## t=1165656466, add=71622343,  i=42,  time=29
+## t=34398423618, add=2077047947,  i=44,  time=739
+## t=49152428274274, add=1534938432833,  i=54,  time=41
+## t=552612234243498, add=62932475746153,  i=67,  time=23
+= 552612234243498
+#+end_example
+
+ - 552612234243498 correct <2020-12-15 Tue 21:15>
+ - looked at other solution at https://gist.github.com/joshbduncan/65f810fe821c7a3ea81a1f5a444ea81e
