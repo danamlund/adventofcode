@@ -21,3 +21,5 @@ ffmpeg -video_size 3839x2160 -f x11grab -i :0.0 -c:v libx265 -crf 28 -preset med
 
 # downscale
 # ffmpeg -i input.mp4 -c:v libx265 -crf 28 -preset medium -vf "scale=-2:1080" output.mp4
+
+# ffmpeg -i input.mp4 -c:v libx265 -crf 28 -preset medium -vf "scale=-2:720,setpts=0.5*PTS" output.mp4
