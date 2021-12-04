@@ -494,3 +494,226 @@ int main() {
 
  - 819540 too low <2021-12-03 Fri 18:48>
  - 4267809 correct <2021-12-03 Fri 18:58>
+* day 4
+** puzzle
+** part 1
+ - <2021-12-04 Sat 11:29>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+int main() {
+  int draws[1024];
+  int drawsi = 0;
+
+  char line[1024];
+  FILE *f = fopen("04.txt", "r");
+  {
+    fgets(line, sizeof(line), f);
+    line[strlen(line)-1] = 0;
+    char *str1, *token, *saveptr;
+    str1 = line;
+    while (token = strtok_r(str1, ",", &saveptr)) {
+      draws[drawsi++] = atoi(token);
+      str1 = NULL;
+    }
+  }
+
+  int boards[100][5][5];
+  int boardsi = 0;
+
+  while (fgets(line, sizeof(line), f)) {
+    for (int i = 0; i < 5; i++) {
+      fgets(line, sizeof(line), f);
+      for (int j = 0; j < 5; j++) {
+        boards[boardsi][i][j] = atoi(line + j*3);
+      }
+    }
+    boardsi++;
+  }
+if (false) {
+  for (int b = 0; b < boardsi; b++) {
+    for (int i = 0; i < 5; i++) {
+      for (int j = 0; j < 5; j++) {
+        printf("%2d ", boards[b][i][j]);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+}
+
+  for (int d = 0; d < drawsi; d++) {
+    for (int b = 0; b < boardsi; b++) {
+      for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+          if (boards[b][i][j] == draws[d]) {
+            boards[b][i][j] = -1;
+          }
+        }
+      }
+    }
+if (false) {
+  printf("## draw %d\n", draws[d]);
+  for (int b = 0; b < boardsi; b++) {
+    for (int i = 0; i < 5; i++) {
+      for (int j = 0; j < 5; j++) {
+        printf("%2d ", boards[b][i][j]);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+}
+    
+    for (int b = 0; b < boardsi; b++) {
+      int bingoboard = false;
+      for (int i = 0; i < 5; i++) {
+        int bingo = true;
+        for (int j = 0; j < 5; j++) {
+          if (boards[b][i][j] != -1) bingo = false;
+        }
+        if (bingo) bingoboard = true;
+      }
+      for (int j = 0; j < 5; j++) {
+        int bingo = true;
+        for (int i = 0; i < 5; i++) {
+          if (boards[b][i][j] != -1) bingo = false;
+        }
+        if (bingo) bingoboard = true;
+      }
+      if (bingoboard) {
+        int unmarkedsum = 0;
+        for (int i = 0; i < 5; i++) {
+          for (int j = 0; j < 5; j++) {
+            if (boards[b][i][j] != -1) unmarkedsum += boards[b][i][j];
+          }
+        }
+        printf("= %d\n", unmarkedsum*draws[d]);
+        return 0;
+      }
+    }
+  }
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 16716
+
+ - 16716 correct <2021-12-04 Sat 12:01>
+** part 2
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+int main() {
+  int draws[1024];
+  int drawsi = 0;
+
+  char line[1024];
+  FILE *f = fopen("04.txt", "r");
+  {
+    fgets(line, sizeof(line), f);
+    line[strlen(line)-1] = 0;
+    char *str1, *token, *saveptr;
+    str1 = line;
+    while (token = strtok_r(str1, ",", &saveptr)) {
+      draws[drawsi++] = atoi(token);
+      str1 = NULL;
+    }
+  }
+
+  int boards[100][5][5];
+  int boardsi = 0;
+
+  while (fgets(line, sizeof(line), f)) {
+    for (int i = 0; i < 5; i++) {
+      fgets(line, sizeof(line), f);
+      for (int j = 0; j < 5; j++) {
+        boards[boardsi][i][j] = atoi(line + j*3);
+      }
+    }
+    boardsi++;
+  }
+if (false) {
+  for (int b = 0; b < boardsi; b++) {
+    for (int i = 0; i < 5; i++) {
+      for (int j = 0; j < 5; j++) {
+        printf("%2d ", boards[b][i][j]);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+}
+
+  int won[1024];
+  for (int b = 0; b < boardsi; b++) {
+    won[b] = false;
+  }
+  int wons = 0;
+
+  for (int d = 0; d < drawsi; d++) {
+    for (int b = 0; b < boardsi; b++) {
+      for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+          if (boards[b][i][j] == draws[d]) {
+            boards[b][i][j] = -1;
+          }
+        }
+      }
+    }
+if (false) {
+  printf("## draw %d\n", draws[d]);
+  for (int b = 0; b < boardsi; b++) {
+    for (int i = 0; i < 5; i++) {
+      for (int j = 0; j < 5; j++) {
+        printf("%2d ", boards[b][i][j]);
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+}
+    
+    for (int b = 0; b < boardsi; b++) {
+      if (won[b]) continue;
+      int bingoboard = false;
+      for (int i = 0; i < 5; i++) {
+        int bingo = true;
+        for (int j = 0; j < 5; j++) {
+          if (boards[b][i][j] != -1) bingo = false;
+        }
+        if (bingo) bingoboard = true;
+      }
+      for (int j = 0; j < 5; j++) {
+        int bingo = true;
+        for (int i = 0; i < 5; i++) {
+          if (boards[b][i][j] != -1) bingo = false;
+        }
+        if (bingo) bingoboard = true;
+      }
+      if (bingoboard) {
+        won[b] = true;
+        wons++;
+        if (wons != boardsi) continue;
+        int unmarkedsum = 0;
+        for (int i = 0; i < 5; i++) {
+          for (int j = 0; j < 5; j++) {
+            if (boards[b][i][j] != -1) unmarkedsum += boards[b][i][j];
+          }
+        }
+        printf("= %d\n", unmarkedsum*draws[d]);
+        return 0;
+      }
+    }
+  }
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 4880
+
+- 4880 correct <2021-12-04 Sat 12:04>
