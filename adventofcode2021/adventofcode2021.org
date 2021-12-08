@@ -913,3 +913,662 @@ int main() {
 
  - 7074 too low <2021-12-05 Sun 07:40>
  - 16518 correct <2021-12-05 Sun 07:48>
+   
+* day 6
+** puzzle
+--- Day 6: Lanternfish ---
+
+The sea floor is getting steeper. Maybe the sleigh keys got carried this way?
+
+A massive school of glowing lanternfish swims past. They must spawn quickly to reach such large numbers - maybe exponentially quickly? You should model their growth rate to be sure.
+
+Although you know nothing about this specific species of lanternfish, you make some guesses about their attributes. Surely, each lanternfish creates a new lanternfish once every 7 days.
+
+However, this process isn't necessarily synchronized between every lanternfish - one lanternfish might have 2 days left until it creates another lanternfish, while another might have 4. So, you can model each fish as a single number that represents the number of days until it creates a new lanternfish.
+
+Furthermore, you reason, a new lanternfish would surely need slightly longer before it's capable of producing more lanternfish: two more days for its first cycle.
+
+So, suppose you have a lanternfish with an internal timer value of 3:
+
+    After one day, its internal timer would become 2.
+    After another day, its internal timer would become 1.
+    After another day, its internal timer would become 0.
+    After another day, its internal timer would reset to 6, and it would create a new lanternfish with an internal timer of 8.
+    After another day, the first lanternfish would have an internal timer of 5, and the second lanternfish would have an internal timer of 7.
+
+A lanternfish that creates a new fish resets its timer to 6, not 7 (because 0 is included as a valid timer value). The new lanternfish starts with an internal timer of 8 and does not start counting down until the next day.
+
+Realizing what you're trying to do, the submarine automatically produces a list of the ages of several hundred nearby lanternfish (your puzzle input). For example, suppose you were given the following list:
+
+3,4,3,1,2
+
+This list means that the first fish has an internal timer of 3, the second fish has an internal timer of 4, and so on until the fifth fish, which has an internal timer of 2. Simulating these fish over several days would proceed as follows:
+
+Initial state: 3,4,3,1,2
+After  1 day:  2,3,2,0,1
+After  2 days: 1,2,1,6,0,8
+After  3 days: 0,1,0,5,6,7,8
+After  4 days: 6,0,6,4,5,6,7,8,8
+After  5 days: 5,6,5,3,4,5,6,7,7,8
+After  6 days: 4,5,4,2,3,4,5,6,6,7
+After  7 days: 3,4,3,1,2,3,4,5,5,6
+After  8 days: 2,3,2,0,1,2,3,4,4,5
+After  9 days: 1,2,1,6,0,1,2,3,3,4,8
+After 10 days: 0,1,0,5,6,0,1,2,2,3,7,8
+After 11 days: 6,0,6,4,5,6,0,1,1,2,6,7,8,8,8
+After 12 days: 5,6,5,3,4,5,6,0,0,1,5,6,7,7,7,8,8
+After 13 days: 4,5,4,2,3,4,5,6,6,0,4,5,6,6,6,7,7,8,8
+After 14 days: 3,4,3,1,2,3,4,5,5,6,3,4,5,5,5,6,6,7,7,8
+After 15 days: 2,3,2,0,1,2,3,4,4,5,2,3,4,4,4,5,5,6,6,7
+After 16 days: 1,2,1,6,0,1,2,3,3,4,1,2,3,3,3,4,4,5,5,6,8
+After 17 days: 0,1,0,5,6,0,1,2,2,3,0,1,2,2,2,3,3,4,4,5,7,8
+After 18 days: 6,0,6,4,5,6,0,1,1,2,6,0,1,1,1,2,2,3,3,4,6,7,8,8,8,8
+
+Each day, a 0 becomes a 6 and adds a new 8 to the end of the list, while each other number decreases by 1 if it was present at the start of the day.
+
+In this example, after 18 days, there are a total of 26 fish. After 80 days, there would be a total of 5934.
+
+Find a way to simulate lanternfish. How many lanternfish would there be after 80 days?
+
+Your puzzle answer was 351092.
+--- Part Two ---
+
+Suppose the lanternfish live forever and have unlimited food and space. Would they take over the entire ocean?
+
+After 256 days in the example above, there would be a total of 26984457539 lanternfish!
+
+How many lanternfish would there be after 256 days?
+
+Your puzzle answer was 1595330616005.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2021-12-06 Mon 17:07>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <string.h>
+int main() {
+  FILE *f = fopen("06.txt", "r");
+
+  int dayToCount[9] = {0};
+  char line[1024];
+  fgets(line, sizeof(line), f);
+  for (int i = 0; line[i]; i++) {
+    if (line[i] >= '0' && line[i] <= '9')
+      dayToCount[line[i]-'0']++;
+  }
+
+  for (int i = 0; i < 9; i++) {
+    printf("%d=%d\n", i, dayToCount[i]);
+  }
+  printf("\n");
+
+  for (int day = 0; day < 80; day++) {
+    int zeros = dayToCount[0];
+    for (int i = 0; i < 9; i++)
+      dayToCount[i] = dayToCount[i+1];
+    dayToCount[8] = zeros;
+    dayToCount[6] += zeros;
+  }
+
+  int sum = 0;
+  for (int i = 0; i < 9; i++) {
+    printf("%d=%d\n", i, dayToCount[i]);
+    sum += dayToCount[i];
+  }
+
+  printf("= %d\n", sum);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+0=0
+1=83
+2=51
+3=58
+4=54
+5=54
+6=0
+7=0
+8=0
+
+0=25532
+1=42594
+2=31998
+3=47322
+4=42341
+5=47270
+6=57495
+7=23297
+8=33243
+= 351092
+#+end_example
+
+ - 595118 too high <2021-12-06 Mon 17:19>
+ - 351092 correct <2021-12-06 Mon 17:22>
+** part 2
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <string.h>
+int main() {
+  FILE *f = fopen("06.txt", "r");
+
+  long dayToCount[9] = {0};
+  char line[1024];
+  fgets(line, sizeof(line), f);
+  for (int i = 0; line[i]; i++) {
+    if (line[i] >= '0' && line[i] <= '9')
+      dayToCount[line[i]-'0']++;
+  }
+
+  for (int i = 0; i < 9; i++) {
+    printf("%d=%ld\n", i, dayToCount[i]);
+  }
+  printf("\n");
+
+  for (int day = 0; day < 256; day++) {
+    long zeros = dayToCount[0];
+    for (int i = 0; i < 9; i++)
+      dayToCount[i] = dayToCount[i+1];
+    dayToCount[8] = zeros;
+    dayToCount[6] += zeros;
+  }
+
+  long sum = 0;
+  for (int i = 0; i < 9; i++) {
+    printf("%d=%ld\n", i, dayToCount[i]);
+    sum += dayToCount[i];
+  }
+
+  printf("= %ld\n", sum);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+0=0
+1=83
+2=51
+3=58
+4=54
+5=54
+6=0
+7=0
+8=0
+
+0=140304164138
+1=162039539115
+2=170391060831
+3=188187916968
+4=208218433266
+5=218720012046
+6=252082120574
+7=117783213814
+8=137604155253
+= 1595330616005
+#+end_example
+
+ - 1595330616005 correct <2021-12-06 Mon 17:24>
+* day 7
+** puzzle
+--- Day 7: The Treachery of Whales ---
+
+A giant whale has decided your submarine is its next meal, and it's much faster than you are. There's nowhere to run!
+
+Suddenly, a swarm of crabs (each in its own tiny submarine - it's too deep for them otherwise) zooms in to rescue you! They seem to be preparing to blast a hole in the ocean floor; sensors indicate a massive underground cave system just beyond where they're aiming!
+
+The crab submarines all need to be aligned before they'll have enough power to blast a large enough hole for your submarine to get through. However, it doesn't look like they'll be aligned before the whale catches you! Maybe you can help?
+
+There's one major catch - crab submarines can only move horizontally.
+
+You quickly make a list of the horizontal position of each crab (your puzzle input). Crab submarines have limited fuel, so you need to find a way to make all of their horizontal positions match while requiring them to spend as little fuel as possible.
+
+For example, consider the following horizontal positions:
+
+16,1,2,0,4,2,7,1,2,14
+
+This means there's a crab with horizontal position 16, a crab with horizontal position 1, and so on.
+
+Each change of 1 step in horizontal position of a single crab costs 1 fuel. You could choose any horizontal position to align them all on, but the one that costs the least fuel is horizontal position 2:
+
+    Move from 16 to 2: 14 fuel
+    Move from 1 to 2: 1 fuel
+    Move from 2 to 2: 0 fuel
+    Move from 0 to 2: 2 fuel
+    Move from 4 to 2: 2 fuel
+    Move from 2 to 2: 0 fuel
+    Move from 7 to 2: 5 fuel
+    Move from 1 to 2: 1 fuel
+    Move from 2 to 2: 0 fuel
+    Move from 14 to 2: 12 fuel
+
+This costs a total of 37 fuel. This is the cheapest possible outcome; more expensive outcomes include aligning at position 1 (41 fuel), position 3 (39 fuel), or position 10 (71 fuel).
+
+Determine the horizontal position that the crabs can align to using the least fuel possible. How much fuel must they spend to align to that position?
+
+Your puzzle answer was 337833.
+--- Part Two ---
+
+The crabs don't seem interested in your proposed solution. Perhaps you misunderstand crab engineering?
+
+As it turns out, crab submarine engines don't burn fuel at a constant rate. Instead, each change of 1 step in horizontal position costs 1 more unit of fuel than the last: the first step costs 1, the second step costs 2, the third step costs 3, and so on.
+
+As each crab moves, moving further becomes more expensive. This changes the best horizontal position to align them all on; in the example above, this becomes 5:
+
+    Move from 16 to 5: 66 fuel
+    Move from 1 to 5: 10 fuel
+    Move from 2 to 5: 6 fuel
+    Move from 0 to 5: 15 fuel
+    Move from 4 to 5: 1 fuel
+    Move from 2 to 5: 6 fuel
+    Move from 7 to 5: 3 fuel
+    Move from 1 to 5: 10 fuel
+    Move from 2 to 5: 6 fuel
+    Move from 14 to 5: 45 fuel
+
+This costs a total of 168 fuel. This is the new cheapest possible outcome; the old alignment position (2) now costs 206 fuel instead.
+
+Determine the horizontal position that the crabs can align to using the least fuel possible so they can make you an escape route! How much fuel must they spend to align to that position?
+
+Your puzzle answer was 96678050.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2021-12-07 Tue 17:31>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <stdlib.h>
+int main() {
+  int poss[1024];
+  int possi = 0;
+  FILE *f = fopen("07.txt", "r");
+  char line[1024];
+  int linei = 0, c;
+  while ((c = fgetc(f)) != EOF) {
+    if (c >= '0' && c <= '9') {
+      line[linei++] = c;
+    } else {
+      if (linei >= 1) {
+        line[linei] = 0;
+        poss[possi++] = atoi(line);
+      }
+      linei = 0;
+    }
+  }
+  int min = 99999, max = 0;
+  for (int i = 0; i < possi; i++) {
+    if (poss[i] < min) min = poss[i];
+    if (poss[i] > max) max = poss[i];
+  }
+  int mincost = 9999999999;
+  int mina = -1;
+  for (int a = min; a <= max; a++) {
+    int cost = 0;
+    for (int i = 0; i < possi; i++) {
+      cost += poss[i] > a ? poss[i] - a : a - poss[i];
+    }
+    if (cost < mincost || mina == -1) {
+      mincost = cost;
+      mina = a;
+    }
+  }
+
+  printf("= %d\n", mincost);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 337833
+
+ - 331 too low <2021-12-07 Tue 17:44>
+ - 337833 correct <2021-12-07 Tue 17:47>
+** part 2
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <stdlib.h>
+int main() {
+  int poss[1024];
+  int possi = 0;
+  FILE *f = fopen("07.txt", "r");
+  char line[1024];
+  int linei = 0, c;
+  while ((c = fgetc(f)) != EOF) {
+    if (c >= '0' && c <= '9') {
+      line[linei++] = c;
+    } else {
+      if (linei >= 1) {
+        line[linei] = 0;
+        poss[possi++] = atoi(line);
+      }
+      linei = 0;
+    }
+  }
+  int min = 99999, max = 0;
+  for (int i = 0; i < possi; i++) {
+    if (poss[i] < min) min = poss[i];
+    if (poss[i] > max) max = poss[i];
+  }
+  int mincost = 9999999999;
+  int mina = -1;
+  for (int a = min; a <= max; a++) {
+    int cost = 0;
+    for (int i = 0; i < possi; i++) {
+      for (int j = 1; j <= (poss[i] > a ? poss[i] - a : a - poss[i]); j++)
+        cost += j;
+      //cost += poss[i] > a ? poss[i] - a : a - poss[i];
+    }
+    if (cost < mincost || mina == -1) {
+      mincost = cost;
+      mina = a;
+    }
+  }
+
+  printf("= %d\n", mincost);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: = 96678050
+
+ - 96678050 correct <2021-12-07 Tue 17:49>
+* day 8
+** puzzle
+--- Day 8: Seven Segment Search ---
+
+You barely reach the safety of the cave when the whale smashes into the cave mouth, collapsing it. Sensors indicate another exit to this cave at a much greater depth, so you have no choice but to press on.
+
+As your submarine slowly makes its way through the cave system, you notice that the four-digit seven-segment displays in your submarine are malfunctioning; they must have been damaged during the escape. You'll be in a lot of trouble without them, so you'd better figure out what's wrong.
+
+Each digit of a seven-segment display is rendered by turning on or off any of seven segments named a through g:
+
+  0:      1:      2:      3:      4:
+ aaaa    ....    aaaa    aaaa    ....
+b    c  .    c  .    c  .    c  b    c
+b    c  .    c  .    c  .    c  b    c
+ ....    ....    dddd    dddd    dddd
+e    f  .    f  e    .  .    f  .    f
+e    f  .    f  e    .  .    f  .    f
+ gggg    ....    gggg    gggg    ....
+
+  5:      6:      7:      8:      9:
+ aaaa    aaaa    aaaa    aaaa    aaaa
+b    .  b    .  .    c  b    c  b    c
+b    .  b    .  .    c  b    c  b    c
+ dddd    dddd    ....    dddd    dddd
+.    f  e    f  .    f  e    f  .    f
+.    f  e    f  .    f  e    f  .    f
+ gggg    gggg    ....    gggg    gggg
+
+So, to render a 1, only segments c and f would be turned on; the rest would be off. To render a 7, only segments a, c, and f would be turned on.
+
+The problem is that the signals which control the segments have been mixed up on each display. The submarine is still trying to display numbers by producing output on signal wires a through g, but those wires are connected to segments randomly. Worse, the wire/segment connections are mixed up separately for each four-digit display! (All of the digits within a display use the same connections, though.)
+
+So, you might know that only signal wires b and g are turned on, but that doesn't mean segments b and g are turned on: the only digit that uses two segments is 1, so it must mean segments c and f are meant to be on. With just that information, you still can't tell which wire (b/g) goes to which segment (c/f). For that, you'll need to collect more information.
+
+For each display, you watch the changing signals for a while, make a note of all ten unique signal patterns you see, and then write down a single four digit output value (your puzzle input). Using the signal patterns, you should be able to work out which pattern corresponds to which digit.
+
+For example, here is what you might see in a single entry in your notes:
+
+acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab |
+cdfeb fcadb cdfeb cdbaf
+
+(The entry is wrapped here to two lines so it fits; in your notes, it will all be on a single line.)
+
+Each entry consists of ten unique signal patterns, a | delimiter, and finally the four digit output value. Within an entry, the same wire/segment connections are used (but you don't know what the connections actually are). The unique signal patterns correspond to the ten different ways the submarine tries to render a digit using the current wire/segment connections. Because 7 is the only digit that uses three segments, dab in the above example means that to render a 7, signal lines d, a, and b are on. Because 4 is the only digit that uses four segments, eafb means that to render a 4, signal lines e, a, f, and b are on.
+
+Using this information, you should be able to work out which combination of signal wires corresponds to each of the ten digits. Then, you can decode the four digit output value. Unfortunately, in the above example, all of the digits in the output value (cdfeb fcadb cdfeb cdbaf) use five segments and are more difficult to deduce.
+
+For now, focus on the easy digits. Consider this larger example:
+
+be cfbegad cbdgef fgaecd cgeb fdcge agebfd fecdb fabcd edb |
+fdgacbe cefdb cefbgd gcbe
+edbfga begcd cbg gc gcadebf fbgde acbgfd abcde gfcbed gfec |
+fcgedb cgb dgebacf gc
+fgaebd cg bdaec gdafb agbcfd gdcbef bgcad gfac gcb cdgabef |
+cg cg fdcagb cbg
+fbegcd cbd adcefb dageb afcb bc aefdc ecdab fgdeca fcdbega |
+efabcd cedba gadfec cb
+aecbfdg fbg gf bafeg dbefa fcge gcbea fcaegb dgceab fcbdga |
+gecf egdcabf bgf bfgea
+fgeab ca afcebg bdacfeg cfaedg gcfdb baec bfadeg bafgc acf |
+gebdcfa ecba ca fadegcb
+dbcfg fgd bdegcaf fgec aegbdf ecdfab fbedc dacgb gdcebf gf |
+cefg dcbef fcge gbcadfe
+bdfegc cbegaf gecbf dfcage bdacg ed bedf ced adcbefg gebcd |
+ed bcgafe cdgba cbgef
+egadfb cdbfeg cegd fecab cgb gbdefca cg fgcdab egfdb bfceg |
+gbdfcae bgc cg cgb
+gcafb gcf dcaebfg ecagb gf abcdeg gaef cafbge fdbac fegbdc |
+fgae cfgab fg bagce
+
+Because the digits 1, 4, 7, and 8 each use a unique number of segments, you should be able to tell which combinations of signals correspond to those digits. Counting only digits in the output values (the part after | on each line), in the above example, there are 26 instances of digits that use a unique number of segments (highlighted above).
+
+In the output values, how many times do digits 1, 4, 7, or 8 appear?
+
+Your puzzle answer was 237.
+--- Part Two ---
+
+Through a little deduction, you should now be able to determine the remaining digits. Consider again the first example above:
+
+acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab |
+cdfeb fcadb cdfeb cdbaf
+
+After some careful analysis, the mapping between signal wires and segments only make sense in the following configuration:
+
+ dddd
+e    a
+e    a
+ ffff
+g    b
+g    b
+ cccc
+
+So, the unique signal patterns would correspond to the following digits:
+
+    acedgfb: 8
+    cdfbe: 5
+    gcdfa: 2
+    fbcad: 3
+    dab: 7
+    cefabd: 9
+    cdfgeb: 6
+    eafb: 4
+    cagedb: 0
+    ab: 1
+
+Then, the four digits of the output value can be decoded:
+
+    cdfeb: 5
+    fcadb: 3
+    cdfeb: 5
+    cdbaf: 3
+
+Therefore, the output value for this entry is 5353.
+
+Following this same process for each entry in the second, larger example above, the output value of each entry can be determined:
+
+    fdgacbe cefdb cefbgd gcbe: 8394
+    fcgedb cgb dgebacf gc: 9781
+    cg cg fdcagb cbg: 1197
+    efabcd cedba gadfec cb: 9361
+    gecf egdcabf bgf bfgea: 4873
+    gebdcfa ecba ca fadegcb: 8418
+    cefg dcbef fcge gbcadfe: 4548
+    ed bcgafe cdgba cbgef: 1625
+    gbdfcae bgc cg cgb: 8717
+    fgae cfgab fg bagce: 4315
+
+Adding all of the output values in this larger example produces 61229.
+
+For each entry, determine all of the wire/segment connections and decode the four-digit output values. What do you get if you add up all of the output values?
+
+Your puzzle answer was 1009098.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2021-12-08 Wed 17:04>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+int main() {
+  FILE *f = fopen("08.txt", "r");
+  char line[1024];
+  int knowns = 0;
+  while (fgets(line, sizeof(line), f)) {
+    int i = 0;
+    while (line[i] != '|') i++;
+    int len = 0;
+    while (line[i] != '\n') {
+      i++;
+      if (line[i] >= 'a' && line[i] <= 'z') {
+        len++;
+      } else {
+        if (len == 2 || len == 4 || len == 3 || len == 7)
+          knowns++;
+        len = 0;
+      }
+    }
+  }
+  printf("%d\n", knowns);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: 237
+
+
+ - 75 wrong <2021-12-08 Wed 17:13>
+ - 237 correct <2021-12-08 Wed 17:15>
+** part 2
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+  int main() {
+    FILE *f = fopen("08.txt", "r");
+    char line[1024];
+    int knowns = 0;
+    int sum = 0;
+    while (fgets(line, sizeof(line), f)) {
+      // 0=6, 1=2, 2=5, 3=5, 4=4, 5=5, 6=6, 7=3, 8=7, 9=6
+      // 2=1
+      // 3=7
+      // 4=4
+      // 5=2,3,5
+      // 6=0,6,9
+      // 7=8
+      
+      // acedgfb cdfbe gcdfa fbcad dab cefabd cdfgeb eafb cagedb ab
+      // ab = 1 so ab -> cf
+      // dab = 7 so abd -> acf so d -> a
+      // eafb = 4 so eafb -> bcdf so ef -> bd
+      // acedgfb = 8 so nothing
+      // look for 0 (has len=6 and cf and one of bd)
+      // look for 9 (has len=6 and cf and bd)
+      // look for 6 (has len=6 and one of cf and bd)
+      // look for 2 (has len=5 and one of cf and one of bd)
+      // look for 3 (has len=5 and cf and one of bd)
+      // look for 5 (has len=5 and one of cf and bd)
+
+  //   0:  
+  //  aaaa    0000
+  // b    c  1    2 
+  // b    c  1    2
+  //  dddd    3333
+  // e    f  4    5
+  // e    f  4    5
+  //  gggg    6666
+
+      char bd[7] = { false };
+      char cf[7] = { false };
+      char val[7] = { false };
+      int vallen = 0;
+      for (int state = 0; state < 2; state++) {
+      for (int i = 0; line[i] != '|'; i++) {
+        if (line[i] >= 'a' && line[i] <= 'z') {
+          val[line[i] - 'a'] = true;
+          vallen++;
+        } else {
+          //printf("%d%d %d%d %d%d %d%d\n", val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7]);
+
+          if (state == 0 && vallen == 2) { // 1
+            for (int j = 0; j < 7; j++)
+              cf[j] = val[j];
+          }
+          if (state == 1 && vallen == 4) { // 4
+            for (int j = 0; j < 7; j++)
+              bd[j] = val[j] && !cf[j];
+          }
+          for (int j = 0; j < 7; j++) val[j] = false;
+          vallen = 0;
+        }
+      }
+      }
+
+      int result = 0;
+      int state = 0;
+      for (int i = 0; i == 0 || line[i-1] != '\n'; i++) {
+        if (state == 0) {
+          if (line[i] == '|') {
+            state = 1;
+            i++;
+          }
+          continue;
+        }
+        if (line[i] >= 'a' && line[i] <= 'z') {
+          val[line[i] - 'a'] = true;
+          vallen++;
+        } else {
+          //printf("%d%d %d%d %d%d %d\n", val[0], val[1], val[2], val[3], val[4], val[5], val[6]);
+
+          result *= 10;
+
+          int has_cfs = 0;
+          int has_bds = 0;
+          for (int j = 0; j < 7; j++) {
+            if (val[j] && bd[j]) has_bds++;
+            if (val[j] && cf[j]) has_cfs++;
+          }
+
+          if (vallen == 6 && has_cfs == 2 && has_bds == 1)
+            result += 0;
+          else if (vallen == 2)
+            result += 1;
+          else if (vallen == 5 && has_cfs == 1 && has_bds == 1)
+            result += 2;
+          else if (vallen == 5 && has_cfs == 2 && has_bds == 1)
+            result += 3;
+          else if (vallen == 4)
+            result += 4;
+          else if (vallen == 5 && has_cfs == 1 && has_bds == 2)
+            result += 5;
+          else if (vallen == 6 && has_cfs == 1 && has_bds == 2)
+            result += 6;
+          else if (vallen == 3)
+            result += 7;
+          else if (vallen == 7)
+            result += 8;
+          else if (vallen == 6 && has_cfs == 2 && has_bds == 2)
+            result += 9;
+          else
+            printf("## !\n");
+
+          for (int j = 0; j < 7; j++) val[j] = false;
+          vallen = 0;
+        }
+      }
+      //printf("## %d\n", result);
+      sum += result;
+    }
+    printf("%d\n", sum);
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: 1009098
+
+ - 1009098 correct <2021-12-08 Wed 18:27>
