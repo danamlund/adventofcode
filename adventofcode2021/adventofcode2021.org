@@ -1572,3 +1572,145 @@ int main() {
 : 1009098
 
  - 1009098 correct <2021-12-08 Wed 18:27>
+* day 9
+** puzzle
+** part 1
+ - <2021-12-09 Thu 17:40>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <string.h>
+int main() {
+  FILE *f = fopen("09.txt", "r");
+  char grid[110][110];
+  int gridx = 0;
+  int gridy = 0;
+  char line[1024];
+  while (fgets(line, sizeof(line), f)) {
+    for (int i = 0; line[i] != '\n'; i++) {
+      grid[gridy][i] = line[i] - '0';
+      gridx = i + 1;
+    }
+    gridy++;
+  }
+
+  if (false) {
+  printf("## %dx%d\n", gridy, gridx);
+  for (int i = 0; i < gridy; i++) {
+    for (int j = 0; j < gridx; j++) {
+      printf("%d", grid[i][j]);
+    }
+    printf("\n");
+  }
+  }
+
+  int sum = 0;
+  for (int i = 0; i < gridy; i++) {
+    for (int j = 0; j < gridx; j++) {
+      int islow = true;
+      if (i > 0 && grid[i-1][j] <= grid[i][j]) islow = false;
+      if (i < gridy-1 && grid[i+1][j] <= grid[i][j]) islow = false;
+      if (j > 0 && grid[i][j-1] <= grid[i][j]) islow = false;
+      if (j < gridx-1 && grid[i][j+1] <= grid[i][j]) islow = false;
+      if (islow) {
+        sum += 1 + grid[i][j];
+        if (false) {
+        printf("## %d,%d = %d,", i, j, grid[i][j]);
+        if (i > 0) printf(" 1=%d", grid[i-1][j]);
+        if (i < gridy-1) printf(" 2=%d", grid[i+1][j]);
+        if (j > 0) printf(" 3=%d", grid[i][j-1]);
+        if (j < gridx-1) printf(" 4=%d", grid[i][j+1]);
+        printf("\n");
+        }
+      }
+    }  
+  }
+
+  printf("%d\n", sum);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: 465
+
+ - 1815 too high <2021-12-09 Thu 17:51>
+ - 465 correct <2021-12-09 Thu 18:01>
+** part 2
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <string.h>
+int main() {
+  FILE *f = fopen("09.txt", "r");
+  char grid[110][110];
+  int gridx = 0;
+  int gridy = 0;
+  char line[1024];
+  while (fgets(line, sizeof(line), f)) {
+    for (int i = 0; line[i] != '\n'; i++) {
+      grid[gridy][i] = line[i] - '0';
+      gridx = i + 1;
+    }
+    gridy++;
+  }
+
+  if (false) {
+  printf("## %dx%d\n", gridy, gridx);
+  for (int i = 0; i < gridy; i++) {
+    for (int j = 0; j < gridx; j++) {
+      printf("%d", grid[i][j]);
+    }
+    printf("\n");
+  }
+  }
+
+  int basin1 = 0, basin2 = 0, basin3 = 0;
+
+  char q[10000];
+  int qi = 0;
+  char mark[110][110] = {false};
+  for (int i = 0; i < gridy; i++) {
+    for (int j = 0; j < gridx; j++) {
+      if (grid[i][j] == 9) continue;
+      if (mark[i][j]) continue;
+
+      int size = 0;
+      q[qi++] = i;
+      q[qi++] = j;
+      while (qi != 0) {
+        int ci = q[qi-2];
+        int cj = q[qi-1];
+        qi -= 2;
+        if (mark[ci][cj]) continue;
+        mark[ci][cj] = true;
+        if (grid[ci][cj] == 9) continue;
+        size++;
+
+        if (ci > 0 && !mark[ci-1][cj] && grid[ci-1][cj] != 9) { q[qi++] = ci-1; q[qi++] = cj; }
+        if (ci < gridy-1 && !mark[ci+1][cj] && grid[ci+1][cj] != 9) { q[qi++] = ci+1; q[qi++] = cj; }
+        if (cj > 0 && !mark[ci][cj-1] && grid[ci][cj-1] != 9) { q[qi++] = ci; q[qi++] = cj-1; }
+        if (cj < gridx-1 && !mark[ci][cj+1] && grid[ci][cj+1] != 9) { q[qi++] = ci; q[qi++] = cj+1; }
+        if (qi > sizeof(q)) { printf("qi big\n"); return 0; }
+      }
+
+      if (size > basin1) {
+        basin3 = basin2;
+        basin2 = basin1;
+        basin1 = size;
+      } else if (size > basin2) {
+        basin3 = basin2;
+        basin2 = size;
+      } else if (size > basin3) {
+        basin3 = size;
+      }
+    }
+  }
+
+  printf("%d\n", basin1 * basin2 * basin3);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: 1269555
+
+ - 1269555 correct <2021-12-09 Thu 18:41>
