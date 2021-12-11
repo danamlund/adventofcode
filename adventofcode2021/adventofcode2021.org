@@ -1927,3 +1927,162 @@ int main() {
 
  - 598669714 too low <2021-12-10 Fri 18:05>
  - 1952146692 correct <2021-12-10 Fri 18:08>
+* day 11
+** puzzle
+** part 1
+ - <2021-12-11 Sat 15:28>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+int main() {
+  FILE *f = fopen("11.txt", "r");
+
+  char grid[11][11];
+  char line[1024];
+  for (int i = 0; i < 10; i++) {
+    fgets(line, sizeof(line), f);
+    for (int j = 0; j < 10; j++) {
+      grid[i][j] = line[j]-'0';
+    }
+  }
+
+  if (false) {
+  for (int i = 0; i < 10; i++) {
+    for (int j = 0; j < 10; j++) {
+      printf("%d", grid[i][j]);
+    }
+    printf("\n");
+  }
+  }
+
+  int flashes = 0;
+  for (int step = 0; step < 100; step++) {
+    for (int i = 0; i < 10; i++)
+      for (int j = 0; j < 10; j++)
+        grid[i][j]++;
+
+    int didflash = true;
+    while (didflash) {
+    didflash = false;
+    for (int i = 0; i < 10; i++) {
+      for (int j = 0; j < 10; j++) {
+        if (grid[i][j] >= 10) {
+          flashes++;
+          didflash = true;
+          grid[i][j] = -1000000;
+        for (int di = -1; di <= 1; di++) {
+          for (int dj = -1; dj <= 1; dj++) {
+            if (i+di >= 0 && i+di < 10 && j+dj >= 0 && j+dj < 10) {
+              grid[i+di][j+dj]++;
+            }
+          }
+        }
+        }
+      }
+    }
+    }
+       
+    for (int i = 0; i < 10; i++)
+      for (int j = 0; j < 10; j++)
+        if (grid[i][j] < 0) grid[i][j] = 0;
+
+  if (false) {
+  printf("## after %d steps\n", step+1);
+  for (int i = 0; i < 10; i++) {
+    for (int j = 0; j < 10; j++) {
+      printf("%d", grid[i][j]);
+    }
+    printf("\n");
+  }
+  }
+  }
+  
+
+  printf("%d\n", flashes);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: 1691
+
+ - 1691 correct <2021-12-11 Sat 15:44>
+** part 2
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+int main() {
+  FILE *f = fopen("11.txt", "r");
+
+  char grid[11][11];
+  char line[1024];
+  for (int i = 0; i < 10; i++) {
+    fgets(line, sizeof(line), f);
+    for (int j = 0; j < 10; j++) {
+      grid[i][j] = line[j]-'0';
+    }
+  }
+
+  if (false) {
+  for (int i = 0; i < 10; i++) {
+    for (int j = 0; j < 10; j++) {
+      printf("%d", grid[i][j]);
+    }
+    printf("\n");
+  }
+  }
+
+  for (int step = 0; step < 300; step++) {
+    int flashes = 0;
+    for (int i = 0; i < 10; i++)
+      for (int j = 0; j < 10; j++)
+        grid[i][j]++;
+
+    int didflash = true;
+    while (didflash) {
+    didflash = false;
+    for (int i = 0; i < 10; i++) {
+      for (int j = 0; j < 10; j++) {
+        if (grid[i][j] >= 10) {
+          flashes++;
+          didflash = true;
+          grid[i][j] = -1000000;
+        for (int di = -1; di <= 1; di++) {
+          for (int dj = -1; dj <= 1; dj++) {
+            if (i+di >= 0 && i+di < 10 && j+dj >= 0 && j+dj < 10) {
+              grid[i+di][j+dj]++;
+            }
+          }
+        }
+        }
+      }
+    }
+    }
+       
+    for (int i = 0; i < 10; i++)
+      for (int j = 0; j < 10; j++)
+        if (grid[i][j] < 0) grid[i][j] = 0;
+
+  if (false) {
+  printf("## after %d steps\n", step+1);
+  for (int i = 0; i < 10; i++) {
+    for (int j = 0; j < 10; j++) {
+      printf("%d", grid[i][j]);
+    }
+    printf("\n");
+  }
+  }
+    if (flashes == 10*10) {
+      printf("%d\n", step+1);
+      break;
+    }
+  }
+  printf("?\n");
+  
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: 216
+: ?
+
+ - 216 correct <2021-12-11 Sat 15:48>
