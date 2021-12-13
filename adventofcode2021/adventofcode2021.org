@@ -2478,3 +2478,300 @@ int main() {
 : 148962
 
  - 148962 correct <2021-12-12 Sun 10:01>
+* day 13
+** puzzle
+--- Day 13: Transparent Origami ---
+
+You reach another volcanically active part of the cave. It would be nice if you could do some kind of thermal imaging so you could tell ahead of time which caves are too hot to safely enter.
+
+Fortunately, the submarine seems to be equipped with a thermal camera! When you activate it, you are greeted with:
+
+Congratulations on your purchase! To activate this infrared thermal imaging
+camera system, please enter the code found on page 1 of the manual.
+
+Apparently, the Elves have never used this feature. To your surprise, you manage to find the manual; as you go to open it, page 1 falls out. It's a large sheet of transparent paper! The transparent paper is marked with random dots and includes instructions on how to fold it up (your puzzle input). For example:
+
+6,10
+0,14
+9,10
+0,3
+10,4
+4,11
+6,0
+6,12
+4,1
+0,13
+10,12
+3,4
+3,0
+8,4
+1,10
+2,14
+8,10
+9,0
+
+fold along y=7
+fold along x=5
+
+The first section is a list of dots on the transparent paper. 0,0 represents the top-left coordinate. The first value, x, increases to the right. The second value, y, increases downward. So, the coordinate 3,0 is to the right of 0,0, and the coordinate 0,7 is below 0,0. The coordinates in this example form the following pattern, where # is a dot on the paper and . is an empty, unmarked position:
+
+...#..#..#.
+....#......
+...........
+#..........
+...#....#.#
+...........
+...........
+...........
+...........
+...........
+.#....#.##.
+....#......
+......#...#
+#..........
+#.#........
+
+Then, there is a list of fold instructions. Each instruction indicates a line on the transparent paper and wants you to fold the paper up (for horizontal y=... lines) or left (for vertical x=... lines). In this example, the first fold instruction is fold along y=7, which designates the line formed by all of the positions where y is 7 (marked here with -):
+
+...#..#..#.
+....#......
+...........
+#..........
+...#....#.#
+...........
+...........
+-----------
+...........
+...........
+.#....#.##.
+....#......
+......#...#
+#..........
+#.#........
+
+Because this is a horizontal line, fold the bottom half up. Some of the dots might end up overlapping after the fold is complete, but dots will never appear exactly on a fold line. The result of doing this fold looks like this:
+
+#.##..#..#.
+#...#......
+......#...#
+#...#......
+.#.#..#.###
+...........
+...........
+
+Now, only 17 dots are visible.
+
+Notice, for example, the two dots in the bottom left corner before the transparent paper is folded; after the fold is complete, those dots appear in the top left corner (at 0,0 and 0,1). Because the paper is transparent, the dot just below them in the result (at 0,3) remains visible, as it can be seen through the transparent paper.
+
+Also notice that some dots can end up overlapping; in this case, the dots merge together and become a single dot.
+
+The second fold instruction is fold along x=5, which indicates this line:
+
+#.##.|#..#.
+#...#|.....
+.....|#...#
+#...#|.....
+.#.#.|#.###
+.....|.....
+.....|.....
+
+Because this is a vertical line, fold left:
+
+#####
+#...#
+#...#
+#...#
+#####
+.....
+.....
+
+The instructions made a square!
+
+The transparent paper is pretty big, so for now, focus on just completing the first fold. After the first fold in the example above, 17 dots are visible - dots that end up overlapping after the fold is completed count as a single dot.
+
+How many dots are visible after completing just the first fold instruction on your transparent paper?
+
+Your puzzle answer was 661.
+--- Part Two ---
+
+Finish folding the transparent paper according to the instructions. The manual says the code is always eight capital letters.
+
+What code do you use to activate the infrared thermal imaging camera system?
+
+Your puzzle answer was PFKLKCFP.
+
+Both parts of this puzzle are complete! They provide two gold stars: **
+** part 1
+ - <2021-12-13 Mon 18:06>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <string.h>
+#define LEN 1500
+int main() {
+  char xys[LEN][LEN] = {false};
+  FILE *f = fopen("13.txt", "r");
+  char line[1024];
+  int minx = 0, miny = 0, maxx = 0, maxy = 0;
+  while (fgets(line, sizeof(line), f)) {
+    if (line[0] == '\n') break;
+    int x,y;
+    sscanf(line, "%d,%d", &x, &y);
+    xys[x][y] = true;
+    if (x > maxx) maxx = x;
+    if (y > maxy) maxy = y;
+  }
+
+  while (fgets(line, sizeof(line), f)) {
+    if (false) {
+    //printf("## %d,%d\n", maxx, maxy);
+    for (int y = miny; y <= maxy; y++) {
+     for (int x = minx; x <= maxx; x++) {
+         printf("%c", xys[x][y] ? '#' : '.');
+      }
+      printf("\n");
+    }
+    }
+
+    if (strncmp(line, "fold along y=", sizeof("fold along y=")-1) == 0) {
+      int fold;
+      sscanf(line, "fold along y=%d", &fold);
+      for (int i = 1; ; i++) {
+        int y1 = fold-i;
+        int y2 = fold+i;
+        if (y1 < miny || y2 > maxy) break;
+        for (int x = minx; x <= maxx; x++) {
+          if (xys[x][y2]) xys[x][y1] = true;
+        }
+      }
+      maxy = fold-1;
+    } else {
+      int fold;
+      sscanf(line, "fold along x=%d", &fold);
+      for (int i = 1; ; i++) {
+        int x1 = fold-i;
+        int x2 = fold+i;
+        if (x1 < minx || x2 > maxx) break;
+        for (int y = miny; y <= maxy; y++) {
+          if (xys[x2][y]) xys[x1][y] = true;
+        }
+      }
+      maxx = fold-1;
+    }
+
+    break;
+  }
+
+  if (false) {
+    printf("## %d,%d\n", maxx, maxy);
+    for (int y = miny; y <= maxy; y++) {
+     for (int x = minx; x <= maxx; x++) {
+         printf("%c", xys[x][y] ? '#' : '.');
+      }
+      printf("\n");
+    }
+  }
+
+  int dots = 0;
+  for (int y = miny; y <= maxy; y++)
+    for (int x = minx; x <= maxx; x++)
+      if (xys[x][y]) dots++;
+  
+
+  printf("%d\n", dots);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: 661
+
+ - 661 correct <2021-12-13 Mon 18:23>
+** part 2
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <string.h>
+#define LEN 1500
+int main() {
+  char xys[LEN][LEN] = {false};
+  FILE *f = fopen("13.txt", "r");
+  char line[1024];
+  int minx = 0, miny = 0, maxx = 0, maxy = 0;
+  while (fgets(line, sizeof(line), f)) {
+    if (line[0] == '\n') break;
+    int x,y;
+    sscanf(line, "%d,%d", &x, &y);
+    xys[x][y] = true;
+    if (x > maxx) maxx = x;
+    if (y > maxy) maxy = y;
+  }
+
+  while (fgets(line, sizeof(line), f)) {
+    if (false) {
+    //printf("## %d,%d\n", maxx, maxy);
+    for (int y = miny; y <= maxy; y++) {
+     for (int x = minx; x <= maxx; x++) {
+         printf("%c", xys[x][y] ? '#' : '.');
+      }
+      printf("\n");
+    }
+    }
+
+    if (strncmp(line, "fold along y=", sizeof("fold along y=")-1) == 0) {
+      int fold;
+      sscanf(line, "fold along y=%d", &fold);
+      for (int i = 1; ; i++) {
+        int y1 = fold-i;
+        int y2 = fold+i;
+        if (y1 < miny || y2 > maxy) break;
+        for (int x = minx; x <= maxx; x++) {
+          if (xys[x][y2]) xys[x][y1] = true;
+        }
+      }
+      maxy = fold-1;
+    } else {
+      int fold;
+      sscanf(line, "fold along x=%d", &fold);
+      for (int i = 1; ; i++) {
+        int x1 = fold-i;
+        int x2 = fold+i;
+        if (x1 < minx || x2 > maxx) break;
+        for (int y = miny; y <= maxy; y++) {
+          if (xys[x2][y]) xys[x1][y] = true;
+        }
+      }
+      maxx = fold-1;
+    }
+  }
+
+  if (true) {
+    printf("## %d,%d\n", maxx, maxy);
+    for (int y = miny; y <= maxy; y++) {
+     for (int x = minx; x <= maxx; x++) {
+         printf("%c", xys[x][y] ? '#' : '.');
+      }
+      printf("\n");
+    }
+  }
+
+  int dots = 0;
+  for (int y = miny; y <= maxy; y++)
+    for (int x = minx; x <= maxx; x++)
+      if (xys[x][y]) dots++;
+  
+
+  printf("%d\n", dots);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: ## 39,5
+: ###..####.#..#.#....#..#..##..####.###..
+: #..#.#....#.#..#....#.#..#..#.#....#..#.
+: #..#.###..##...#....##...#....###..#..#.
+: ###..#....#.#..#....#.#..#....#....###..
+: #....#....#.#..#....#.#..#..#.#....#....
+: #....#....#..#.####.#..#..##..#....#....
+: 89
+
+ - PFKLKCFP correct <2021-12-13 Mon 18:24>
