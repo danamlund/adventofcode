@@ -2775,3 +2775,171 @@ int main() {
 : 89
 
  - PFKLKCFP correct <2021-12-13 Mon 18:24>
+* day 14
+** puzzle
+** part 1
+ - <2021-12-14 Tue 17:39>
+#+BEGIN_SRC cpp :results output
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+int main() {
+  FILE *f = fopen("14.txt", "r");
+  char pairs[133][133] = {0};
+  char line[1024];
+
+  char *tmp1 = (char*)malloc(100000);
+  char *tmp2 = (char*)malloc(100000);
+
+  fgets(line, sizeof(line), f);
+  line[strlen(line)-1] = 0;
+  strcpy(tmp1, line);
+  while (fgets(line, sizeof(line), f)) {
+    if (line[0] == '\n') continue;
+    pairs[line[0]][line[1]] = line[6];
+  }
+
+  char *prev = tmp1;
+  //printf("## %d = %s\n", 0, tmp1);
+  for (int step = 0; step < 20; step++) {
+    char *cur = (step % 2) ? tmp2 : tmp1;
+    char *next = (step % 2) ? tmp1 : tmp2;
+
+    int nexti = 0;
+    next[nexti++] = cur[0];
+    for (int i = 1; cur[i]; i++) {
+      next[nexti++] = pairs[cur[i-1]][cur[i]];
+      next[nexti++] = cur[i];
+    }
+    next[nexti++] = 0;
+    //printf("## %d = %s\n", step+1, next);
+    prev = next;
+  }
+
+  int counts[133] = {0};
+  for (int i = 0; prev[i]; i++) {
+    counts[prev[i]]++;
+  }
+
+  int max = 0;
+  int min = 9999999999;
+  for (int i = 'A'; i <= 'Z'; i++) {
+    if (counts[i] > 0 && counts[i] < min) min = counts[i];
+    if (counts[i] > max) max = counts[i];
+  }
+
+  printf("%d\n", max - min);
+  return 0;
+}
+#+END_SRC
+
+#+RESULTS:
+: 3411
+
+ - 3411 correct <2021-12-14 Tue 17:56>
+** part 2
+#+BEGIN_SRC cpp :results output
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
+    char pairs[133][133] = {0};
+    long pairToCharToCounts[26][26][26] = {0};
+    char paircached[26][26] = {false};
+
+    char *tmp1 = (char*)malloc(100000000);
+    char *tmp2 = (char*)malloc(100000000);
+    char *prev = tmp1;
+
+    long** charcountstmp1() {
+      prev = tmp1;
+      for (int step = 0; step < 20; step++) {
+        char *cur = (step % 2) ? tmp2 : tmp1;
+        char *next = (step % 2) ? tmp1 : tmp2;
+
+        int nexti = 0;
+        next[nexti++] = cur[0];
+        for (int i = 1; cur[i]; i++) {
+          next[nexti++] = pairs[cur[i-1]][cur[i]];
+          next[nexti++] = cur[i];
+        }
+        next[nexti++] = 0;
+        prev = next;
+      }
+    }
+
+    void charcounts(char a, char b) {
+      if (paircached[a-'A'][b-'A']) return;
+      tmp1[0] = a;
+      tmp1[1] = b;
+      tmp1[2] = 0;
+
+      charcountstmp1();
+
+      for (int i = 0; prev[i]; i++) {
+        pairToCharToCounts[a-'A'][b-'A'][prev[i]-'A']++;
+      }
+      paircached[a-'A'][b-'A'] = true;
+    }
+
+    int main() {
+      FILE *f = fopen("14.txt", "r");
+      char line[1024];
+
+      fgets(line, sizeof(line), f);
+      line[strlen(line)-1] = 0;
+      strcpy(tmp1, line);
+      while (fgets(line, sizeof(line), f)) {
+        if (line[0] == '\n') continue;
+        pairs[line[0]][line[1]] = line[6];
+      }
+
+      charcountstmp1();
+
+      char *mid = strdup(prev);
+
+      //printf("## midlen=%d %c%c\n", strlen(mid), mid[0], mid[1]);
+      //long pairToCharToCounts[25][25][25] = {0};
+      long counts[133] = {0};
+      for (int i = 1; mid[i]; i++) {
+        charcounts(mid[i-1], mid[i]);
+        //printf("%c%c: ", mid[i-1], mid[i]);
+        for (int j = 0; j < 25; j++) {
+          //printf("%c=%ld ", 'A'+j, pairToCharToCounts[mid[i-1]-'A'][mid[i]-'A'][j]);
+          counts['A'+j] += pairToCharToCounts[mid[i-1]-'A'][mid[i]-'A'][j];
+        }
+        if (mid[i+1]) counts[mid[i]]--;
+        //printf("\n");
+        //break;
+      }
+
+      long max = 0;
+      long min = -1;
+      for (int i = 'A'; i <= 'Z'; i++) {
+        if (counts[i] == 0) continue;
+        printf("## %c=%ld\n", i, counts[i]);
+        if (counts[i] > 0 && (min < 0 || counts[i] < min)) min = counts[i];
+        if (counts[i] > max) max = counts[i];
+      }
+
+      printf("%ld\n", max - min);
+
+      return 0;
+    }
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+## B=930680129376
+## C=302338065046
+## F=7780153820616
+## H=1742505016267
+## K=913725470018
+## N=1566218246458
+## O=967975612284
+## P=4760683893900
+## S=1358636927079
+## V=567803746701
+7477815755570
+#+end_example
+
+ - 7477815755570 correct <2021-12-14 Tue 19:22>
