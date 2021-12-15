@@ -3377,7 +3377,8 @@ int main() {
     int y = miny;
     for (int dy = -1; dy <= 1; dy++) {
       for (int dx = -1; dx <= 1; dx++) {
-        if (dy==dx || -dy==dx || dx==-dy) continue;
+        if (dy==dx) continue;
+        if (dy==dx || -dy==dx || dx==-dy) continue; // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         if (x+dx < 0 || x+dx >= size*sizemul) continue;
         if (y+dy < 0 || y+dy >= size*sizemul) continue;
         if (yxvisited[y+dy][x+dx]) continue;
