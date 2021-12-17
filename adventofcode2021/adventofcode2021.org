@@ -3742,3 +3742,152 @@ int main() {
 : 3408662834145
 
  - 3408662834145 correct <2021-12-16 Thu 18:13>
+* day 17
+** puzzle
+** part 1
+ - <2021-12-17 Fri 17:03>
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+
+    int targetminx = 207, targetmaxx = 263, targetminy = -115, targetmaxy = -63;
+
+    // types input wrong and wasted mich time
+    //int targetminx = 207, targetmaxx = 263, targetminy = -155, targetmaxy = -63;
+
+    //int targetminx = 20, targetmaxx = 30, targetminy = -10, targetmaxy = -5;
+
+  int check(int x, int y, int *maxpy) {
+        int cx=x, cy=y;
+        int px=0, py=0;
+        int hit = false;
+        int maxpycur = 0;
+        while (1) {
+          px += cx;
+          py += cy;
+          if (cx > 0) cx--;
+          if (cx < 0) cx++;
+          cy--;
+ //         printf("#### %d,%d (%d,%d)\n", px, py, cx, cy);
+          if (cx >= 0 && px > targetmaxx) break;
+          if (cx <= 0 && px < targetminx) break;
+          if (cy <= 0 && py < targetminy) break;
+
+          if (py > maxpycur) maxpycur = py;
+
+          if (px >= targetminx && px <= targetmaxx && py >= targetminy && py <= targetmaxy) {
+            hit = true; break;
+          }
+        }
+        *maxpy = maxpycur;
+        return hit;
+  }
+
+  int main() {
+    int maxpyx = 0;
+    int maxpyy = 0;
+    int maxpy = 0;
+
+    if (false) {
+    int maxpycur;
+    //check(20, 149, &maxpycur); // best by other solution
+    check(20, 154, &maxpycur); // best by other solution
+    printf("#3? %d\n", maxpycur);
+    return 0;
+    }
+
+    for (int x = -1000; x <= 1000; x++) {
+      for (int y = 1000; y >= -1000; y--) {
+        //printf("## %d,%d\n", x, y);
+        int maxpycur = 0;
+        if (check(x, y, &maxpycur)) {
+          if (maxpycur > maxpy) { maxpy = maxpycur; maxpyx=x; maxpyy=y; 
+          }
+          //if (maxpycur > 10000)
+          //printf("## %d,%d = %d\n", x, y, maxpycur);
+        }
+      }
+    }
+
+    printf("## %d,%d\n", maxpyx, maxpyy);
+    printf("%d\n", maxpy);
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: ## 20,114
+: 6555
+
+ - 6555 correct <2021-12-17 Fri 18:08>
+** part 2
+#+BEGIN_SRC cpp :results output
+  #include <stdio.h>
+
+    int targetminx = 207, targetmaxx = 263, targetminy = -115, targetmaxy = -63;
+    //int targetminx = 20, targetmaxx = 30, targetminy = -10, targetmaxy = -5;
+
+  int check(int x, int y, int *maxpy) {
+        int cx=x, cy=y;
+        int px=0, py=0;
+        int hit = false;
+        int maxpycur = 0;
+        while (1) {
+          px += cx;
+          py += cy;
+          if (cx > 0) cx--;
+          if (cx < 0) cx++;
+          cy--;
+ //         printf("#### %d,%d (%d,%d)\n", px, py, cx, cy);
+          if (cx >= 0 && px > targetmaxx) break;
+          if (cx <= 0 && px < targetminx) break;
+          if (cy <= 0 && py < targetminy) break;
+
+          if (py > maxpycur) maxpycur = py;
+
+          if (px >= targetminx && px <= targetmaxx && py >= targetminy && py <= targetmaxy) {
+            hit = true; break;
+          }
+        }
+        *maxpy = maxpycur;
+        return hit;
+  }
+
+  int main() {
+    int maxpyx = 0;
+    int maxpyy = 0;
+    int maxpy = 0;
+
+    if (false) {
+    int maxpycur;
+    //check(20, 149, &maxpycur); // best by other solution
+    check(20, 154, &maxpycur); // best by other solution
+    printf("#3? %d\n", maxpycur);
+    return 0;
+    }
+
+int hits = 0;
+    for (int x = -1000; x <= 1000; x++) {
+      for (int y = 1000; y >= -1000; y--) {
+        //printf("## %d,%d\n", x, y);
+        int maxpycur = 0;
+        if (check(x, y, &maxpycur)) {
+        hits++;
+          if (maxpycur > maxpy) { maxpy = maxpycur; maxpyx=x; maxpyy=y; 
+          }
+          //if (maxpycur > 10000)
+          //printf("## %d,%d = %d\n", x, y, maxpycur);
+        }
+      }
+    }
+
+    printf("## %d,%d\n", maxpyx, maxpyy);
+    printf("%d\n", hits);
+    return 0;
+  }
+#+END_SRC
+
+#+RESULTS:
+: ## 20,114
+: 4973
+
+ - 4973 correct <2021-12-17 Fri 18:09>
