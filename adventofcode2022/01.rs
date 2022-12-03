@@ -37,6 +37,7 @@ fn star2() {
 
    let sum : i64 = top3.iter().sum();
    println!("= {}", sum);
+   //println!("= {}", top3.iter().sum::<i64>()); // top from others
 }
 
 fn main() {
