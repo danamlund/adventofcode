@@ -1,3 +1,9 @@
+07:
+	rustc -o a 07.rs && ./a && rm a
+06:
+	rustc -o a 06.rs && ./a && rm a
+05:
+	rustc -o a 05.rs && ./a && rm a
 04:
 	rustc -o a 04.rs && ./a && rm a
 03:
