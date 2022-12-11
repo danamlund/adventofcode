@@ -1,3 +1,5 @@
+09:
+	rustc -o a 09.rs && ./a && rm a
 08:
 	rustc -o a 08.rs && ./a && rm a
 07:
