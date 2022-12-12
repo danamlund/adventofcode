@@ -1,3 +1,5 @@
+12:
+	rustc -o a 12.rs && ./a && rm a
 11:
 	rustc -o a 11.rs && ./a && rm a
 10:
