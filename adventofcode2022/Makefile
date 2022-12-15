@@ -1,3 +1,5 @@
+15:
+	rustc -o a 15.rs && ./a && rm a
 14:
 	rustc -o a 14.rs && ./a && rm a
 13:
