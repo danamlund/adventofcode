@@ -1,3 +1,5 @@
+5:
+	go run 05.go
 4:
 	go run 04.go
 3:
