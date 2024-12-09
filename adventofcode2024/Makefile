@@ -1,3 +1,5 @@
+9:
+	go run 09.go
 8:
 	go run 08.go
 7:
