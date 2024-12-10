@@ -115,9 +115,8 @@ func star2() {
 	// 	fmt.Printf("\n")
 	// }
 
-	var pathsAmount func(x1,y1, x3,y3 int, seens *[][]bool) int;
-	pathsAmount = func(x1,y1, x3,y3 int, seens *[][]bool) int {
-		(*seens)[y1][x1] = true
+	var pathsAmount func(x1,y1, x3,y3 int) int;
+	pathsAmount = func(x1,y1, x3,y3 int) int {
 		sum := 0
 		for dy := -1; dy <= 1; dy++ {
 			for dx := -1; dx <= 1; dx++ {
@@ -126,28 +125,18 @@ func star2() {
 				y2, x2 := y1+dy, x1+dx
 				if y2 < 0 || y2 >= ylen { continue }
 				if x2 < 0 || x2 >= xlen { continue }
-				if (*seens)[y2][x2] { continue }
 				if mp[y2][x2] == mp[y1][x1] + 1  {
 					if y2 == y3 && x2 == x3 {
 						sum++
 					} else {
-						sum += pathsAmount(x2, y2, x3, y3, seens)
+						sum += pathsAmount(x2, y2, x3, y3)
 					}
 				}
 			}
 		}
-		(*seens)[y1][x1] = false
 		return sum
 	}
 
-	pathsAmount0 := func(x1,y1, x3,y3 int) int {
-		seens := make([][]bool, ylen)
-		for y := 0; y < ylen; y++ {
-			seens[y] = make([]bool, xlen)
-		}
-		return pathsAmount(x1,y1, x3,y3, &seens)
-	}
-	
 	sum := 0
 	for y := 0; y < ylen; y++ {
 		for x := 0; x < xlen; x++ {
@@ -201,7 +190,7 @@ func star2() {
 			for y1 := 0; y1 < ylen; y1++ {
 				for x1 := 0; x1 < xlen; x1++ {
 					if mp[y1][x1] == 9 && seens[y1][x1] == 2 {
-						paths += pathsAmount0(x,y, x1,y1)
+						paths += pathsAmount(x,y, x1,y1)
 					}
 				}
 			}
