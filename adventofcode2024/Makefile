@@ -1,3 +1,5 @@
+12:
+	go run 12.go
 11:
 	go run 11.go
 10:
